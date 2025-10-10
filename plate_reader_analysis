@@ -1,0 +1,161 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import csv
+from datetime import datetime
+
+#functions
+def load_data_assign_plate(filepath):
+    data = csv.reader(open(filepath, 'r'))
+    #assigning data to plate
+    dark_data_dict = {}
+    time_points = []
+
+    for row_num, row in enumerate(data):
+        if row_num == 3:
+            time_points = np.array(row[1::], dtype=np.float32)
+        if row[0] in plate_map.keys():
+            dark_data_dict[plate_map[row[0]]] = np.array(row[1::], dtype=np.float32)
+
+    return dark_data_dict, time_points
+
+def mean_std_cv(data):
+    #data should be array containing 1 or more arrays
+    mean = np.mean(data, axis = 0)
+    std_dev = np.std(data, axis = 0)
+    cv = (std_dev/mean)*100
+    return [mean, std_dev, cv]
+
+def process_data_to_mean(filepath):
+    dark_data_dict, time_points = load_data_assign_plate(filepath)
+    dark_data_dict_repeats = {}
+    for key, value in dark_data_dict.items():
+        #parsing name
+        namemet_repeat = key.rsplit("_",1)
+        if namemet_repeat[0] in dark_data_dict_repeats.keys():
+            dark_data_dict_repeats[namemet_repeat[0]].append(value)
+        else:
+            dark_data_dict_repeats[namemet_repeat[0]] = [value]
+
+    dark_data_dict_processed = {}
+    for key, value in dark_data_dict_repeats.items():
+        #getting mean, std, cv
+        mean_std_cv_array = mean_std_cv(value)
+
+        #calculating upper bound
+        upper_bound = mean_std_cv_array[0] + mean_std_cv_array[1]
+        lower_bound = mean_std_cv_array[0] - mean_std_cv_array[1]
+        mean_std_cv_array.append(upper_bound)
+        mean_std_cv_array.append(lower_bound)
+
+        #new dictionary with processed data. value = [mean, std, cv, upper bound, lower bound]
+        dark_data_dict_processed[key] = mean_std_cv_array
+
+    return dark_data_dict_processed, time_points
+
+def load_plate_into_df(data, data_type = "xlsx"):
+    od600_map = pd.DataFrame(0.0, index = ["A","B","C","D","E","F","G","H"], columns= np.arange(1,13))
+    gfp_map = pd.DataFrame(0.0, index = ["A","B","C","D","E","F","G","H"], columns= np.arange(1,13))
+    if data_type == "csv":
+        for row_num, row in enumerate(data):
+            if row_num == 5:
+                timepoints_timeformat = row[1]
+            if row_num in location_of_data_in_sheet_od600[1]:
+                od600_map.loc[row[0]] = np.array(row[1::], dtype=float)
+            if row_num in location_of_data_in_sheet_gfp[1]:
+                gfp_map.loc[row[0]] = np.array(row[1::], dtype=float)
+
+    elif data_type == "xlsx":
+        for row_num, row in enumerate(data.values):
+            if row_num == 5:
+                timepoints_timeformat = row[1]
+            if row_num in location_of_data_in_sheet_od600[1]:
+                od600_map.loc[row[0]] = np.array(row[1::], dtype=float)
+            if row_num in location_of_data_in_sheet_gfp[1]:
+                gfp_map.loc[row[0]] = np.array(row[1::], dtype=float)
+
+    return od600_map, gfp_map, timepoints_timeformat
+
+### MAIN ###
+
+#plate map
+plate_map = {"B1":"media_met+_all",
+             "C1":"media_met+_kan",
+             "D1":"media_met+_none",
+             "B12":"media_met-_all",
+             "C12":"media_met-_kan",
+             "D12":"media_met-_none",
+
+             "B3":"JBL137_met+_1",
+             "B4":"JBL137_met+_2",
+             "B5":"JBL137_met+_3",
+
+             "B8":"JBL137_met-_1",
+             "B9":"JBL137_met-_2",
+             "B10":"JBL137_met-_3",
+
+             "D3":"JBL131_met+_1",
+             "D4":"JBL131_met+_2",
+             "D5":"JBL131_met+_3",
+
+             "D8":"JBL131_met-_1",
+             "D9":"JBL131_met-_2",
+             "D10":"JBL131_met-_3",
+
+             "F3":"JBL066_met+_1",
+             "F4":"JBL066_met+_2",
+             "F5":"JBL066_met+_3",
+
+             "F8":"JBL066_met-_1",
+             "F9":"JBL066_met-_2",
+             "F10":"JBL066_met-_3",
+
+             "H3":"JBL001_met+_1",
+             "H4":"JBL001_met+_2",
+             "H5":"JBL001_met+_3",
+
+             "H8":"JBL001_met-_1",
+             "H9":"JBL001_met-_2",
+             "H10":"JBL001_met-_3",
+             }
+
+#color and linestyles
+color_map = {"JBL137": "blue",
+             "JBL131": "orange",
+             "JBL066": "brown",
+             "JBL001": "black",
+             "media": "yellow",
+}
+
+linestyle_map = {"met+": "solid",
+                 "met-": "dashed",
+}
+
+filepaths = ["25-10-07_growth/25-10-07 Dark t0.xlsx","25-10-07_growth/25-10-07 Dark t2.xlsx","25-10-07_growth/25-10-07 Dark t4.xlsx","25-10-07_growth/25-10-07 Dark t19.xlsx","25-10-07_growth/25-10-07 Dark t22.xlsx"]
+
+location_of_data_in_sheet_od600 = [np.arange(0,12),np.arange(29,37)] #[columns, rows]
+location_of_data_in_sheet_gfp = [np.arange(0,12),np.arange(61,69)] #[columns, rows]
+
+data_dict = {} #name : [od600, gfp, timepoint_timeformat]
+for filepath in filepaths:
+    data = pd.read_excel(filepath, 0, header=None, engine="calamine")
+    od600_map, gfp_map, timepoints_timeformat = load_plate_into_df(data)
+    
+    for key, value in plate_map.items():
+        if value not in data_dict.keys():
+            data_dict[value] = [[od600_map.loc[key[0],int(key[1:])]], [gfp_map.loc[key[0],int(key[1:])]], [timepoints_timeformat]]
+        else:
+            data_dict[value][0].append(od600_map.loc[key[0],int(key[1:])])
+            data_dict[value][1].append(gfp_map.loc[key[0],int(key[1:])])
+            data_dict[value][2].append(timepoints_timeformat)
+
+print(data_dict)
+
+""" timepoints_datetime = datetime.strptime(timepoints_timeformat, "%I:%M:%S %p")
+timepoints_datetime_2 = datetime.strptime("02:00:00 PM", "%I:%M:%S %p")
+
+time_delta = timepoints_datetime - timepoints_datetime_2
+timepoints_hours = time_delta.total_seconds() / 3600
+
+print(time_delta)
+print(timepoints_hours) """
