@@ -115,8 +115,8 @@ marker_map = {"met+": "o",
               "met-": "^",
 }
 
-#filepaths = ["25-10-07_growth/25-10-07 Dark t0.xlsx","25-10-07_growth/25-10-07 Dark t2.xlsx","25-10-07_growth/25-10-07 Dark t4.xlsx","25-10-07_growth/25-10-07 Dark t19.xlsx","25-10-07_growth/25-10-07 Dark t22.xlsx"]
-filepaths = ["25-10-07_growth/25-10-07 Green t0.xlsx","25-10-07_growth/25-10-07 Green t2.xlsx","25-10-07_growth/25-10-07 Green t4.xlsx","25-10-07_growth/25-10-07 Green t19.xlsx","25-10-07_growth/25-10-07 Green t22.xlsx"]
+filepaths = ["25-10-07_growth/25-10-07 Dark t0.xlsx","25-10-07_growth/25-10-07 Dark t2.xlsx","25-10-07_growth/25-10-07 Dark t4.xlsx","25-10-07_growth/25-10-07 Dark t19.xlsx","25-10-07_growth/25-10-07 Dark t22.xlsx"]
+#filepaths = ["25-10-07_growth/25-10-07 Green t0.xlsx","25-10-07_growth/25-10-07 Green t2.xlsx","25-10-07_growth/25-10-07 Green t4.xlsx","25-10-07_growth/25-10-07 Green t19.xlsx","25-10-07_growth/25-10-07 Green t22.xlsx"]
 #filepaths = ["25-10-07_growth/25-10-07 Red t0.xlsx","25-10-07_growth/25-10-07 Red t2.xlsx","25-10-07_growth/25-10-07 Red t4.xlsx","25-10-07_growth/25-10-07 Red t19.xlsx","25-10-07_growth/25-10-07 Red t22.xlsx"]
 
 location_of_data_in_sheet_od600 = [np.arange(0,12),np.arange(29,37)] #[columns, rows]
@@ -148,8 +148,13 @@ for item in timepoints:
     time_delta = timepoints_datetime - initial_time
     timepoints_hrs.append(time_delta.total_seconds() / 3600)
 
-
 data_dict_processed = process_data_to_mean(data_dict)
+
+with open("output.csv", "w") as output:
+    writer = csv.writer(output, delimiter=",")
+    writer.writerow(["timepoints",timepoints_hrs])
+    for key, value in data_dict_processed.items():
+        writer.writerow([key,value])
 
 #plotting
 #data_dict_processed.pop("media_met+") #removing unwanted lines
