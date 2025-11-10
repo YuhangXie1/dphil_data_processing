@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import csv
+import json
 
 #functions
 def load_data_assign_plate(filepath):
@@ -107,25 +108,35 @@ linestyle_map = {"met+": "solid",
                  "met-": "dashed",
 }
 
+marker_map = {"met+": "o",
+              "met-": "^",
+}
+
 #loading time point data
 timepoints_data = csv.reader(open("output.csv", "r"))
 timepoints_data_dict = {}
 for rownum, row in enumerate(timepoints_data):
-    timepoints_data_dict[row[0]] = row[1].strip()
+    timepoints_data_dict[row[0]] = json.loads(row[1])
+timepoints_data_timepoints = timepoints_data_dict.pop("timepoints")
 
-print(timepoints_data_dict)
-
-"""
 #plotting OD600
 filepath = "25-10-07 Repeat wellplate growth trials od600.csv"
 dark_data_dict_processed_od600, time_points = process_data_to_mean(filepath)
+#calculating OD offset between timepoints and timecourse
+offset = np.average(dark_data_dict_processed_od600["media_met+"][0]) - np.average(timepoints_data_dict["media_met+"][0][0])
 dark_data_dict_processed_od600.pop("media_met+") #removing unwanted lines
 dark_data_dict_processed_od600.pop("media_met-")
+
 fig, axs = plt.subplots()
 for key, value in dark_data_dict_processed_od600.items():
     key_name_met = key.split("_")
     axs.plot(time_points, value[0], label = key, color = color_map[key_name_met[0]], linestyle = linestyle_map[key_name_met[1]])
     axs.fill_between(time_points, value[3], value[4], alpha = 0.1, color = color_map[key_name_met[0]])
+
+#timepoint data
+for key, value in timepoints_data_dict.items():
+    key_name_met = key.split("_")
+    axs.errorbar(timepoints_data_timepoints, value[0][0]+offset, yerr = value[1][0], label = key, color = color_map[key_name_met[0]], marker = marker_map[key_name_met[1]], linestyle = '')
 
 axs.set_xlabel("Time (hrs)")
 axs.set_ylabel("OD600")
@@ -146,6 +157,11 @@ for key, value in dark_data_dict_processed_gfp.items():
     axs.plot(time_points, value[0], label = key, color = color_map[key_name_met[0]], linestyle = linestyle_map[key_name_met[1]])
     axs.fill_between(time_points, value[3], value[4], alpha = 0.1, color = color_map[key_name_met[0]])
 
+for key, value in timepoints_data_dict.items():
+    key_name_met = key.split("_")
+    axs.errorbar(timepoints_data_timepoints, value[0][1], yerr = value[1][1], label = key, color = color_map[key_name_met[0]], marker = marker_map[key_name_met[1]], linestyle = '')
+
+
 axs.set_xlabel("Time (hrs)")
 axs.set_ylabel("GFP")
 axs.set_title(f"Cell GFP in Dark")
@@ -165,6 +181,11 @@ for key, value in dark_data_gfp_div_od600.items():
     axs.plot(time_points, value[0], label = key, color = color_map[key_name_met[0]], linestyle = linestyle_map[key_name_met[1]])
     axs.fill_between(time_points, value[3], value[4], alpha = 0.1, color = color_map[key_name_met[0]])
 
+for key, value in timepoints_data_dict.items():
+    key_name_met = key.split("_")
+    axs.errorbar(timepoints_data_timepoints, value[0][2], yerr = value[1][2], label = key, color = color_map[key_name_met[0]], marker = marker_map[key_name_met[1]], linestyle = '')
+
+
 axs.set_xlabel("Time (hrs)")
 axs.set_ylabel("GFP/OD600")
 axs.set_title(f"Cell GFP/OD600 in Dark")
@@ -173,9 +194,6 @@ axs.legend(bbox_to_anchor=(1.0, 1.05))
 fig.tight_layout()
 plt.show()
 
-
-
-"""
 
 
 

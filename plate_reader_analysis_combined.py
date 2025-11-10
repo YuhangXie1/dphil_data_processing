@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import csv
 import copy
+import json
 from datetime import datetime
 
 #functions
@@ -115,61 +116,41 @@ marker_map = {"met+": "o",
               "met-": "^",
 }
 
-filepaths = ["25-10-07_growth/25-10-07 Dark t0.xlsx","25-10-07_growth/25-10-07 Dark t2.xlsx","25-10-07_growth/25-10-07 Dark t4.xlsx","25-10-07_growth/25-10-07 Dark t19.xlsx","25-10-07_growth/25-10-07 Dark t22.xlsx"]
-#filepaths = ["25-10-07_growth/25-10-07 Green t0.xlsx","25-10-07_growth/25-10-07 Green t2.xlsx","25-10-07_growth/25-10-07 Green t4.xlsx","25-10-07_growth/25-10-07 Green t19.xlsx","25-10-07_growth/25-10-07 Green t22.xlsx"]
-#filepaths = ["25-10-07_growth/25-10-07 Red t0.xlsx","25-10-07_growth/25-10-07 Red t2.xlsx","25-10-07_growth/25-10-07 Red t4.xlsx","25-10-07_growth/25-10-07 Red t19.xlsx","25-10-07_growth/25-10-07 Red t22.xlsx"]
-
-location_of_data_in_sheet_od600 = [np.arange(0,12),np.arange(29,37)] #[columns, rows]
-location_of_data_in_sheet_gfp = [np.arange(0,12),np.arange(61,69)] #[columns, rows]
-
-#gathering data from each time point and putting into dict
-data_dict = {} #name : [od600, gfp]
-timepoints = []
-for filepath in filepaths:
-    data = pd.read_excel(filepath, 0, header=None, engine="calamine")
-    od600_map, gfp_map, timepoints_timeformat = load_plate_into_df(data)
-    timepoints.append(timepoints_timeformat)
-    
-    for key, value in plate_map.items():
-        od600_map_item = od600_map.loc[key[0],int(key[1:])]
-        gfp_map_item = gfp_map.loc[key[0],int(key[1:])]
-        if value not in data_dict.keys():
-            data_dict[value] = [[od600_map_item], [gfp_map_item], [gfp_map_item/od600_map_item]]
+#loading time point data
+filepaths = ["output_plate_dark.csv","output_plate_green.csv","output_plate_red.csv"]
+mapping = ["dark","green","red"]
+data_dict = {} #[green_JBL131_met+ : [[mean],[std],[CV]]] where [mean] = [OD600, gfp, OD600/gfp]
+timepoints = {}
+for file_index, file in enumerate(filepaths):
+    data_csv = csv.reader(open(file, "r"))
+    for rownum, row in enumerate(data_csv):
+        if row[0] == "timepoints":
+            timepoints[mapping[file_index]+"_"+"timepoints"] = json.loads(row[1])
         else:
-            data_dict[value][0].append(od600_map_item)
-            data_dict[value][1].append(gfp_map_item)
-            data_dict[value][2].append(gfp_map_item/od600_map_item)
+            data_dict[mapping[file_index]+"_"+row[0]] = json.loads(row[1])
 
-#working out the time points
-initial_time = datetime.strptime(timepoints[0], "%m/%d/%Y %I:%M:%S %p")
-timepoints_hrs = []
-for item in timepoints:
-    timepoints_datetime = datetime.strptime(item, "%m/%d/%Y %I:%M:%S %p")
-    time_delta = timepoints_datetime - initial_time
-    timepoints_hrs.append(time_delta.total_seconds() / 3600)
 
-data_dict_processed = process_data_to_mean(data_dict)
+#plot by strain
+plots_by_strain = {} #label (JBL137) : [original key (dark_JBL131_met+), value] where value is the same as data_dict value
+for key, value in data_dict.items():
+    key_name_strip = key.split("_") #[dark, JBL131, met+]
 
-with open("output.csv", "w") as output:
-    writer = csv.writer(output, delimiter=",")
-    writer.writerow(["timepoints",timepoints_hrs])
-    for key, value in data_dict_processed.items():
-        writer.writerow([key,value])
+    if key_name_strip[1] not in plots_by_strain.keys():
+        plots_by_strain[key_name_strip[1]] = [[key, value]]
+    else:
+        plots_by_strain[key_name_strip[1]].append([key, value])
 
-#plotting
-#data_dict_processed.pop("media_met+") #removing unwanted lines
-#data_dict_processed.pop("media_met-")
-
-#od600
-fig, axs = plt.subplots()
-for key, value in data_dict_processed.items():
-    key_name_met = key.split("_")
-    axs.errorbar(timepoints_hrs, value[0][0],
-                 yerr = value[1][0], capsize = 2.0,
-                 label = key,
-                 color = color_map[key_name_met[0]],
-                 marker = marker_map[key_name_met[1]], markersize = 3.0,
-                 linestyle = linestyle_map[key_name_met[1]], linewidth = 1.0)
+for key, value in plots_by_strain.items():
+    key_name_split = value[0].split("_") #[dark, JBL131, met+]
+    fig, axs = plt.subplots()
+    
+    for entry in value[1]:
+        axs.errorbar(timepoints[], value[0][0],
+                    yerr = value[1][0], capsize = 2.0,
+                    label = key,
+                    color = color_map[key_name_met[0]],
+                    marker = marker_map[key_name_met[1]], markersize = 3.0,
+                    linestyle = linestyle_map[key_name_met[1]], linewidth = 1.0)
 
 axs.set_xlabel("Time (hrs)")
 axs.set_ylabel("OD600")
