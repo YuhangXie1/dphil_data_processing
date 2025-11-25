@@ -63,16 +63,15 @@ def load_plate_into_df(data, data_type = "xlsx"):
     return od600_map, gfp_map, timepoints_timeformat
 
 ### MAIN ###
-"""
-"A2": "JBL001_dark", "A3": "JBL001_dark", "A4": "JBL001_dark",
-"A5": "JBL001_dark", "A6": "JBL001_dark", "A7": "JBL001_dark", "A8": "JBL001_dark",
-"A9": "JBL001_dark", "A10": "JBL001_dark", "A11": "JBL001_dark",
-#"A12": "media",
-"""
+
 #plate map
 plate_map = {
     # Row A
-    #"A1": "media",
+    "A1": "media",
+    "A2": "JBL001_dark", "A3": "JBL001_dark", "A4": "JBL001_dark",
+    "A5": "JBL001_dark", "A6": "JBL001_dark", "A7": "JBL001_dark", "A8": "JBL001_dark",
+    "A9": "JBL001_dark", "A10": "JBL001_dark", "A11": "JBL001_dark",
+    "A12": "media",
 
 
     # Row B (sample = JBL36, replicate 1) — numeric pattern: 2.8,1,2,0.5,1.5,2.8,1,2,0.5,1.5
@@ -124,7 +123,11 @@ plate_map = {
     #"G12": "JCCO",
 
     # Row H
-    #"H1": "media",
+    "H1": "media",
+    "H2": "JBL001_dark", "H3": "JBL001_dark", "H4": "JBL001_dark",
+    "H5": "JBL001_dark", "H6": "JBL001_dark", "H7": "JBL001_dark", "H8": "JBL001_dark",
+    "H9": "JBL001_dark", "H10": "JBL001_dark", "H11": "JBL001_dark",
+    "H12": "media",
 
 }
 
@@ -132,13 +135,6 @@ plate_map_1 = {
     "D4": "JCCO_green_1_1", "D5": "JCCO_green_1_2", "D6": "JCCO_green_1_3", "D7": "JCCO_green_1_4", "D8": "JCCO_green_1_5", "D9": "JCCO_green_1_6",
     "F4": "JBL36_green_1_1", "F5": "JBL36_green_1_2", "F6": "JBL36_green_1_3", "F7": "JBL36_green_1_4", "F8": "JBL36_green_1_5", "F9": "JBL36_green_1_6",
 }
-"""
-"H2": "JBL001_dark", "H3": "JBL001_dark", "H4": "JBL001_dark",
-"H5": "JBL001_dark", "H6": "JBL001_dark", "H7": "JBL001_dark", "H8": "JBL001_dark",
-"H9": "JBL001_dark", "H10": "JBL001_dark", "H11": "JBL001_dark",
-#"H12": "media",
-"""
-
 
 #color and linestyles
 color_map = {"green": "green",
