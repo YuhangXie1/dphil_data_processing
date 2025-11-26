@@ -125,37 +125,37 @@ plate_map = {
     "B1": "JCCO_green_0",     "B2": "JCCO_green_2.52",  "B3": "JCCO_green_0.56",
     "B4": "JCCO_green_1.96",  "B5": "JCCO_green_1.12",  "B6": "JCCO_green_1.4",
     "B7": "JCCO_green_1.68",  "B8": "JCCO_green_0.84",  "B9": "JCCO_green_2.24",
-    "B10": "JCCO_green_0.28", "B11": "JCCO_green_2.8",  "B12": "JBL001_green_-1",
+    "B10": "JCCO_green_0.28", "B11": "JCCO_green_2.8",  "B12": "media_green_-1",
 
     "C1": "JCCO_green_0",     "C2": "JCCO_green_2.52",  "C3": "JCCO_green_0.56",
     "C4": "JCCO_green_1.96",  "C5": "JCCO_green_1.12",  "C6": "JCCO_green_1.4",
     "C7": "JCCO_green_1.68",  "C8": "JCCO_green_0.84",  "C9": "JCCO_green_2.24",
-    "C10": "JCCO_green_0.28", "C11": "JCCO_green_2.8",  "C12": "JBL001_green_-1",
+    "C10": "JCCO_green_0.28", "C11": "JCCO_green_2.8",  "C12": "media_green_-1",
 
     "D1": "JCCO_green_2.8",   "D2": "JCCO_green_0.28",  "D3": "JCCO_green_2.24",
     "D4": "JCCO_green_0.84",  "D5": "JCCO_green_1.68",  "D6": "JCCO_green_1.4",
     "D7": "JCCO_green_1.12",  "D8": "JCCO_green_1.96",  "D9": "JCCO_green_0.56",
-    "D10": "JCCO_green_2.52", "D11": "JCCO_green_0",    "D12": "JBL001_green_0",
+    "D10": "JCCO_green_2.52", "D11": "JCCO_green_0",    "D12": "media_green_0",
 
     "E1": "JCCO_green_1.4",   "E2": "JCCO_green_1.68",  "E3": "JCCO_green_0.84",
     "E4": "JCCO_green_2.24",  "E5": "JCCO_green_0.28",  "E6": "JCCO_green_2.8",
     "E7": "JCCO_green_2.8",   "E8": "JCCO_green_0.28",  "E9": "JCCO_green_2.24",
-    "E10": "JCCO_green_0.84", "E11": "JCCO_green_1.68", "E12": "JBL001_green_0",
+    "E10": "JCCO_green_0.84", "E11": "JCCO_green_1.68", "E12": "media_green_0",
 
     "F1": "JCCO_green_1.4",   "F2": "JCCO_green_1.12",  "F3": "JCCO_green_1.96",
     "F4": "JCCO_green_0.56",  "F5": "JCCO_green_2.52",  "F6": "JCCO_green_0",
     "F7": "JCCO_green_0",     "F8": "JCCO_green_2.52",  "F9": "JCCO_green_0.56",
-    "F10": "JCCO_green_1.96", "F11": "JCCO_green_1.12", "F12": "JBL001_green_2.8",
+    "F10": "JCCO_green_1.96", "F11": "JCCO_green_1.12", "F12": "media_green_2.8",
 
     "G1": "JCCO_green_0.56",  "G2": "JCCO_green_2.52",  "G3": "JCCO_green_0",
     "G4": "JCCO_green_0",     "G5": "JCCO_green_2.52",  "G6": "JCCO_green_0.56",
     "G7": "JCCO_green_1.96",  "G8": "JCCO_green_1.12",  "G9": "JCCO_green_1.4",
-    "G10": "JCCO_green_1.68", "G11": "JCCO_green_0.84", "G12": "JBL001_green_2.8",
+    "G10": "JCCO_green_1.68", "G11": "JCCO_green_0.84", "G12": "media_green_2.8",
 
     "H1": "JCCO_green_2.24",  "H2": "JCCO_green_0.28",  "H3": "JCCO_green_2.8",
     "H4": "JCCO_green_2.8",   "H5": "JCCO_green_0.28",  "H6": "JCCO_green_2.24",
     "H7": "JCCO_green_0.84",  "H8": "JCCO_green_1.68",  "H9": "JCCO_green_1.4",
-    "H10": "JCCO_green_1.12", "H11": "JCCO_green_1.96", "H12": "JBL001_green_2.8",
+    "H10": "JCCO_green_1.12", "H11": "JCCO_green_1.96", "H12": "media_green_2.8",
 }
 
 
@@ -206,7 +206,7 @@ marker_map = {"JBL137": "o",
 
 #filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 395nm.csv"]
 
-filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_high_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_high_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_high_gain_extracted_GFP 395nm.csv"]
+filepaths = ["25-11-25_diya_temp_growth/25-11-25_diya_temp_growth_incubator_extracted_OD600.csv","25-11-25_diya_temp_growth/25-11-25_diya_temp_growth_diya_extracted_OD600.csv"]
 
 
 #initiating data df
@@ -215,10 +215,10 @@ sorted_data_df = pd.DataFrame(0.0, index=indexes, columns=["green_intensity",
                                                            "red_intensity",
                                                            "timepoints",
                                                            "OD600_raw_array","OD600_average","OD600_std",
-                                                           "GFP488_raw_array","GFP488_average","GFP488_std",
-                                                           "GFP395_raw_array","GFP395_average","GFP395_std",
-                                                           "GFP/OD600_raw","GFP/OD600_average","GFP/OD600_std"]
-                                                            ).astype(object)
+                                                           #"GFP488_raw_array","GFP488_average","GFP488_std",
+                                                           #"GFP395_raw_array","GFP395_average","GFP395_std",
+                                                           #"GFP/OD600_raw","GFP/OD600_average","GFP/OD600_std"
+                                                            ]).astype(object)
 #initialising arrays
 sorted_data_df["OD600_raw_array"] = [[] for _ in range(len(sorted_data_df))]
 sorted_data_df["GFP488_raw_array"] = [[] for _ in range(len(sorted_data_df))]
@@ -232,10 +232,10 @@ for filepath in filepaths:
     
     #working out the time points
     timepoints = list(data.columns.values)
-    initial_time = datetime.strptime(timepoints[0], "%Y-%m-%d %H:%M:%S")
+    initial_time = datetime.strptime(timepoints[0], "%d/%m/%Y %H:%M:%S")
     timepoints_hrs = []
     for item in timepoints:
-        timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
+        timepoints_datetime = datetime.strptime(item, "%d/%m/%Y %H:%M:%S")
         time_delta = timepoints_datetime - initial_time
         timepoints_hrs.append(time_delta.total_seconds() / 3600)
 
@@ -248,9 +248,9 @@ for filepath in filepaths:
 #populate raw data from wells
 for well_coord, name in plate_map.items():
     sorted_data_df.loc[name,"OD600_raw_array"].append(np.array(file_list["OD600"].loc[str(well_coord)]))
-    sorted_data_df.loc[name,"GFP488_raw_array"].append(np.array(file_list["GFP 488nm"].loc[str(well_coord)]))
-    sorted_data_df.loc[name,"GFP395_raw_array"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)]))
-    sorted_data_df.loc[name,"GFP/OD600_raw"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
+    #sorted_data_df.loc[name,"GFP488_raw_array"].append(np.array(file_list["GFP 488nm"].loc[str(well_coord)]))
+    #sorted_data_df.loc[name,"GFP395_raw_array"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)]))
+    #sorted_data_df.loc[name,"GFP/OD600_raw"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
 
 #intensity and time points
 sorted_data_df["timepoints"] = [list(file_list["OD600"].columns.values) for _ in range(len(sorted_data_df))]
@@ -261,13 +261,13 @@ for index, row in sorted_data_df.iterrows():
     #mean, std data
     sorted_data_df.at[index,"OD600_average"] = np.mean(sorted_data_df.loc[index,"OD600_raw_array"], axis = 0)
     sorted_data_df.at[index,"OD600_std"] = np.std(sorted_data_df.loc[index,"OD600_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP488_average"] = np.mean(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP488_std"] = np.std(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP395_average"] = np.mean(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP395_std"] = np.std(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
+    #sorted_data_df.at[index,"GFP488_average"] = np.mean(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
+    #sorted_data_df.at[index,"GFP488_std"] = np.std(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
+    #sorted_data_df.at[index,"GFP395_average"] = np.mean(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
+    #sorted_data_df.at[index,"GFP395_std"] = np.std(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
 
-    sorted_data_df.at[index,"GFP/OD600_average"] = np.mean(sorted_data_df.loc[index,"GFP/OD600_raw"], axis = 0)
-    sorted_data_df.at[index,"GFP/OD600_std"] = np.std(sorted_data_df.loc[index,"GFP/OD600_raw"], axis = 0)
+    #sorted_data_df.at[index,"GFP/OD600_average"] = np.mean(sorted_data_df.loc[index,"GFP/OD600_raw"], axis = 0)
+    #sorted_data_df.at[index,"GFP/OD600_std"] = np.std(sorted_data_df.loc[index,"GFP/OD600_raw"], axis = 0)
 
 
 
@@ -312,6 +312,7 @@ axs.legend(bbox_to_anchor=(1.0, 1.05))
 fig.tight_layout()
 plt.show()
 
+"""
 #GFP - average
 fig, axs = plt.subplots()
 for row_index, row in sorted_data_df.iterrows():
@@ -381,6 +382,7 @@ axs.legend(bbox_to_anchor=(1.0, 1.05))
 fig.tight_layout()
 plt.show()
 
+"""
 
 #OD600 - all lines
 fig, axs = plt.subplots()
@@ -408,6 +410,7 @@ axs.legend(bbox_to_anchor=(1.0, 1.05))
 fig.tight_layout()
 plt.show()
 
+"""
 #GFP 395 - all lines
 fig, axs = plt.subplots()
 for row_index, row in sorted_data_df.iterrows():
@@ -488,15 +491,6 @@ axs.errorbar(jbl_data["green_intensity_percentage"], jbl_data["GFP395_average"],
             linestyle = "solid", linewidth = 1.0,
             )
 
-""" axs.errorbar(jcco_data["green_intensity_percentage"], jcco_data["GFP395_average"],
-            yerr = jcco_data["GFP395_std"], capsize = 2.0,
-            label = "JCCO",
-            #color = "blue",
-            marker = "o", markersize = 3.0,
-            linestyle = "solid", linewidth = 1.0,
-            cmap = cmap,
-            ) """
-
 # JCCO plot with gradient color
 x = jcco_data["green_intensity_percentage"].values
 y = jcco_data["GFP395_average"].values
@@ -568,15 +562,6 @@ axs.errorbar(jbl_data["green_intensity_percentage"], jbl_data["GFP/OD600_average
             marker = "^", markersize = 3.0,
             linestyle = "solid", linewidth = 1.0,
             )
-
-""" axs.errorbar(jcco_data["green_intensity_percentage"], jcco_data["GFP/OD600_average"],
-            yerr = jcco_data["GFP/OD600_std"], capsize = 2.0,
-            label = "JCCO",
-            #color = "blue",
-            marker = "o", markersize = 3.0,
-            linestyle = "solid", linewidth = 1.0,
-            cmap = cmap,
-            ) """
 
 # JCCO plot with gradient color
 x = jcco_data["green_intensity_percentage"].values
@@ -877,22 +862,205 @@ fig.suptitle("GFP/OD600 by intensity - all positions", fontsize=14, y=1.00)
 fig.tight_layout()
 plt.show()
 
+"""
 
+#OD600 by intensity - average
 
-####
-#GFP by intensity - average
-
-by_intensity_df = sorted_data_df[["green_intensity","GFP/OD600_average","GFP/OD600_std"]].copy()
-by_intensity_df["GFP/OD600_average_t4"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[0])
-by_intensity_df["GFP/OD600_average_t10"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[1])
-by_intensity_df["GFP/OD600_average_t20"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[2])
-by_intensity_df["GFP/OD600_std_t4"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[0])
-by_intensity_df["GFP/OD600_std_t10"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[1])
-by_intensity_df["GFP/OD600_std_t20"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[2])
+by_intensity_df = sorted_data_df[["green_intensity","OD600_average","OD600_std"]].copy()
+by_intensity_df["OD600_average"] = by_intensity_df["OD600_average"].apply(lambda x: x[-1])
+by_intensity_df["OD600_std"] = by_intensity_df["OD600_std"].apply(lambda x: x[-1])
 by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
 by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
 
-jbl_data = by_intensity_df[by_intensity_df.index.str.contains('JBL001')]
+#jbl_data = by_intensity_df[by_intensity_df.index.str.contains('JBL001')]
+jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
+media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
+
+colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+
+fig, axs = plt.subplots()
+
+
+# JCCO plot with gradient color
+x = jcco_data["green_intensity_percentage"].values
+y = jcco_data["OD600_average"].values
+yerr = jcco_data["OD600_std"].values
+
+# Create line segments for gradient
+points = np.array([x, y]).T.reshape(-1, 1, 2)
+segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+# Normalize x values for colormap
+norm = plt.Normalize(x.min(), x.max())
+lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+lc.set_array(x)
+axs.add_collection(lc)
+
+# Add scatter points with gradient colors
+scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o', label='JCCO')
+
+# Add error bars for JCCO
+axs.errorbar(x, y, yerr=yerr, fmt='none', ecolor='gray', alpha=1.0, capsize=2.0)
+
+axs.errorbar(media_data["green_intensity_percentage"], media_data["OD600_average"],
+            yerr = media_data["OD600_std"], capsize = 2.0,
+            label = "media",
+            color = "black",
+            marker = "^", markersize = 3.0,
+            linestyle = "dotted", linewidth = 1.0,
+            )
+
+x_axis = axs.set_xlabel("Green light intensity %")
+x_axis.set_color("green")
+
+x_axis_two = axs.secondary_xaxis("bottom", functions=(lambda x: 100-x, lambda x: 100-x))
+x_axis_two.set_xlabel("Red light intensity %")
+x_axis_two.set_color("red")
+x_axis_two.spines['bottom'].set_position(('outward', 40))
+
+axs.set_ylabel("OD600")
+axs.set_title(f"OD600 by intensity - average")
+axs.legend(bbox_to_anchor=(1.0, 1.05))
+
+fig.tight_layout()
+plt.show()
+
+#OD600 by intensity - all
+by_intensity_df = sorted_data_df[["green_intensity","OD600_raw_array"]].copy()
+by_intensity_df["OD600_raw_array"] = by_intensity_df["OD600_raw_array"].apply(lambda x: [array[-1] for array in x])
+by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
+
+#jbl_data = by_intensity_df[by_intensity_df.index.str.contains('JBL001')]
+jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
+media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
+
+colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+
+fig, axs = plt.subplots()
+
+for i in range(len(jcco_data["OD600_raw_array"].iloc[0])):
+
+    # JCCO plot with gradient color
+    x = jcco_data["green_intensity_percentage"].values
+    y = np.array([row[i] for row in jcco_data['OD600_raw_array']])
+
+    # Create line segments for gradient
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+    # Normalize x values for colormap
+    norm = plt.Normalize(x.min(), x.max())
+    lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+    lc.set_array(x)
+    axs.add_collection(lc)
+
+    # Add scatter points with gradient colors
+    label_jcco = f'JCCO' if i == 0 else None   
+    scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o', label=label_jcco)
+
+x_axis = axs.set_xlabel("Green light intensity %")
+x_axis.set_color("green")
+
+x_axis_two = axs.secondary_xaxis("bottom", functions=(lambda x: 100-x, lambda x: 100-x))
+x_axis_two.set_xlabel("Red light intensity %")
+x_axis_two.set_color("red")
+x_axis_two.spines['bottom'].set_position(('outward', 40))
+
+axs.set_ylabel("OD600")
+axs.set_title(f"OD600 by intensity - all")
+axs.legend(bbox_to_anchor=(1.0, 1.05))
+
+fig.tight_layout()
+plt.show()
+
+
+
+#GFP by intensity - all positions in separate subplots
+
+by_intensity_df = sorted_data_df[["green_intensity","OD600_raw_array"]].copy()
+by_intensity_df["OD600_raw_array"] = by_intensity_df["OD600_raw_array"].apply(lambda x: [array[-1] for array in x])
+by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
+
+#jbl_data = by_intensity_df[by_intensity_df.index.str.contains('JBL001')]
+jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
+media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
+
+colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+
+# Get max number of positions across all datasets
+n_jcco = len(jcco_data["OD600_raw_array"].iloc[0]) if len(jcco_data) > 0 else 0
+#n_jbl = len(jbl_data["GFP395_raw_array"].iloc[0]) if len(jbl_data) > 0 else 0
+n_media = len(media_data["OD600_raw_array"].iloc[0]) if len(media_data) > 0 else 0
+n_positions = max(n_jcco, n_media)
+
+# Create subplots - adjust rows and cols as needed
+n_cols = 2  # 2 columns
+n_rows = (n_positions + n_cols - 1) // n_cols  # Calculate rows needed
+fig, axs = plt.subplots(n_rows, n_cols, figsize=(12, 4*n_rows))
+axs = axs.flatten()  # Flatten to 1D array for easier indexing
+
+for i in range(n_positions):
+    ax = axs[i]
+    
+    # JCCO plot with gradient color
+    if i < n_jcco:
+        x = jcco_data["green_intensity_percentage"].values
+        y = np.array([row[i] for row in jcco_data['OD600_raw_array']])
+
+        # Create line segments for gradient
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        # Normalize x values for colormap
+        norm = plt.Normalize(x.min(), x.max())
+        lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+        lc.set_array(x)
+        ax.add_collection(lc)
+
+        # Add scatter points with gradient colors
+        scatter = ax.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o', label='JCCO')
+
+    # Auto-scale to fit LineCollection
+    ax.autoscale()
+    
+    # Set labels for each subplot
+    ax.set_xlabel("Green light intensity %", color="green")
+    ax.set_ylabel("OD600")
+    ax.set_title(f"Position {i+1}")
+    ax.legend(loc='best')
+    ax.grid(True, alpha=0.3)
+    
+
+# Hide any unused subplots
+for j in range(n_positions, len(axs)):
+    axs[j].axis('off')
+
+fig.suptitle("OD600 by intensity - all positions", fontsize=14, y=1.00)
+fig.tight_layout()
+plt.show()
+
+
+
+#OD600 by intensity - average - all time points
+
+by_intensity_df = sorted_data_df[["green_intensity","OD600_average","OD600_std"]].copy()
+by_intensity_df["OD600_average_t0"] = by_intensity_df["OD600_average"].apply(lambda x: x[0])
+by_intensity_df["OD600_average_t4"] = by_intensity_df["OD600_average"].apply(lambda x: x[1])
+by_intensity_df["OD600_average_t10"] = by_intensity_df["OD600_average"].apply(lambda x: x[2])
+by_intensity_df["OD600_average_t24"] = by_intensity_df["OD600_average"].apply(lambda x: x[3])
+by_intensity_df["OD600_std_t0"] = by_intensity_df["OD600_std"].apply(lambda x: x[0])
+by_intensity_df["OD600_std_t4"] = by_intensity_df["OD600_std"].apply(lambda x: x[1])
+by_intensity_df["OD600_std_t10"] = by_intensity_df["OD600_std"].apply(lambda x: x[2])
+by_intensity_df["OD600_std_t24"] = by_intensity_df["OD600_std"].apply(lambda x: x[3])
+by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
+
+#jbl_data = by_intensity_df[by_intensity_df.index.str.contains('JBL001')]
 jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
 media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
 
@@ -904,23 +1072,13 @@ fig, axs = plt.subplots()
 err_color = {"t0": "red",
              "t4": "orange",
              "t10": "green",
-             "t20": "blue"}
+             "t24": "blue"}
 
-for i in ["t4","t10","t20"]:
-
-    axs.errorbar(jbl_data["green_intensity_percentage"], jbl_data["GFP/OD600_average"+"_"+i],
-                yerr = jbl_data["GFP/OD600_std"+"_"+i], capsize = 2.0,
-                label = "JBL001",
-                color = "black",
-                ecolor=err_color[i],
-                marker = "^", markersize = 3.0,
-                linestyle = "solid", linewidth = 1.0,
-                )
-
+for i in ["t0","t4","t10","t24"]:
     # JCCO plot with gradient color
     x = jcco_data["green_intensity_percentage"].values
-    y = jcco_data["GFP/OD600_average"+"_"+i].values
-    yerr = jcco_data["GFP/OD600_std"+"_"+i].values
+    y = jcco_data["OD600_average"+"_"+i].values
+    yerr = jcco_data["OD600_std"+"_"+i].values
 
     # Create line segments for gradient
     points = np.array([x, y]).T.reshape(-1, 1, 2)
@@ -936,16 +1094,7 @@ for i in ["t4","t10","t20"]:
     scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o', label='JCCO')
 
     # Add error bars for JCCO
-    axs.errorbar(x, y, yerr=yerr, fmt='none', ecolor=err_color[i], alpha=1.0, capsize=2.0, label = "JCCO_"+i)
-
-    axs.errorbar(media_data["green_intensity_percentage"], media_data["GFP/OD600_average"+"_"+i],
-                yerr = media_data["GFP/OD600_std"+"_"+i], capsize = 2.0,
-                label = "media",
-                color = "black",
-                ecolor=err_color[i],
-                marker = "^", markersize = 3.0,
-                linestyle = "dotted", linewidth = 1.0,
-                )
+    axs.errorbar(x, y, yerr=yerr, label = i, fmt='none', ecolor=err_color[i], alpha=1.0, capsize=2.0)
 
 x_axis = axs.set_xlabel("Green light intensity %")
 x_axis.set_color("green")
@@ -955,8 +1104,8 @@ x_axis_two.set_xlabel("Red light intensity %")
 x_axis_two.set_color("red")
 x_axis_two.spines['bottom'].set_position(('outward', 40))
 
-axs.set_ylabel("GFP 395nm/OD600")
-axs.set_title(f"GFP 395nm/OD600 by intensity - average")
+axs.set_ylabel("OD600")
+axs.set_title(f"OD600 by intensity - average")
 axs.legend(bbox_to_anchor=(1.0, 1.05))
 
 fig.tight_layout()
