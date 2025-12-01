@@ -61,12 +61,12 @@ plate_table_df = pd.DataFrame(0.0, index = key_wells, columns = ["0"])
 all_plate_table_df = {}
 #print(plate_map)
 
-folder = "25-11-25_diya_temp_growth"
-name = "25-11-25_diya_temp_growth_incubator"
-filepaths = ["25-11-25_incubator_t0.xlsx",
-             "25-11-25_incubator_t4.xlsx",
-             "25-11-25_incubator_t10.xlsx",
-             "25-11-25_incubator_t24.xlsx"]
+folder = "25-11-27_diya_5"
+name = "25-11-27_diya_5"
+filepaths = ["25-11-27_diya2_t0.xlsx",
+             "25-11-27_diya2_t5.xlsx",
+             "25-11-27_diya2_t11.xlsx",
+             "25-11-27_diya2_t24.xlsx"]
 #filepath = "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_t0.xlsx"
 
 #extracting data
