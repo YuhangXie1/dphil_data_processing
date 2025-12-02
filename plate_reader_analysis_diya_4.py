@@ -237,7 +237,7 @@ for filepath in filepaths:
     for item in timepoints:
         timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
         time_delta = timepoints_datetime - initial_time
-        timepoints_hrs.append(time_delta.total_seconds() / 3600)
+        timepoints_hrs.append(time_delta.total_seconds() / 3600 + 4)
 
     #renaming file column to the time
     data = data.rename(columns={old:new for (old,new) in zip(timepoints, timepoints_hrs)})
@@ -284,7 +284,7 @@ plot_selection = {
 }
 
 plot_exclude = {
-    "cells":[],
+    "cells":["media"],
     "color":[],
     "intensity":[]
 }
@@ -543,7 +543,7 @@ plt.show()
 
 
 
-#GFP by intensity - average
+#GFP/OD600 by intensity - average
 
 by_intensity_df = sorted_data_df[["green_intensity","GFP/OD600_average","GFP/OD600_std"]].copy()
 by_intensity_df["GFP/OD600_average"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[-1])
@@ -623,7 +623,59 @@ fig.tight_layout()
 plt.show()
 
 
+#OD600 by intensity - average
 
+by_intensity_df = sorted_data_df[["green_intensity","OD600_average","OD600_std"]].copy()
+by_intensity_df["OD600_average"] = by_intensity_df["OD600_average"].apply(lambda x: x[-1])
+by_intensity_df["OD600_std"] = by_intensity_df["OD600_std"].apply(lambda x: x[-1])
+by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
+
+jbl_data = by_intensity_df[by_intensity_df.index.str.contains('JBL001')]
+jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
+media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
+
+colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+
+fig, axs = plt.subplots()
+
+# JCCO plot with gradient color
+x = jcco_data["green_intensity_percentage"].values
+y = jcco_data["OD600_average"].values
+yerr = jcco_data["OD600_std"].values
+
+# Create line segments for gradient
+points = np.array([x, y]).T.reshape(-1, 1, 2)
+segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+# Normalize x values for colormap
+norm = plt.Normalize(x.min(), x.max())
+lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+lc.set_array(x)
+axs.add_collection(lc)
+
+# Add scatter points with gradient colors
+scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o', label='JCCO')
+
+# Add error bars for JCCO
+axs.errorbar(x, y, yerr=yerr, fmt='none', ecolor='gray', alpha=1.0, capsize=2.0)
+
+
+x_axis = axs.set_xlabel("Green light intensity %")
+x_axis.set_color("green")
+
+x_axis_two = axs.secondary_xaxis("bottom", functions=(lambda x: 100-x, lambda x: 100-x))
+x_axis_two.set_xlabel("Red light intensity %")
+x_axis_two.set_color("red")
+x_axis_two.spines['bottom'].set_position(('outward', 40))
+
+axs.set_ylabel("OD600")
+axs.set_title(f"OD600 by intensity - average")
+axs.legend(bbox_to_anchor=(1.0, 1.05))
+
+fig.tight_layout()
+plt.show()
 
 #GFP by intensity - all
 by_intensity_df = sorted_data_df[["green_intensity","GFP395_raw_array"]].copy()
