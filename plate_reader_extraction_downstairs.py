@@ -17,7 +17,7 @@ def read_data_from_excel(filepath):
     for row_num, row in enumerate(data.values):
         if "Label:" in str(row[0]):
             data_name = row[0].split(":")[-1].strip() #finds label
-            #print(data_name)
+
         if "Start Time:" in str(row[0]):
             data_time = row[1] #finds time stamp
         if str(row[0]) in key_rows:
@@ -35,7 +35,7 @@ def read_data_from_excel(filepath):
 def place_data_into_table(extracted_data):
     #pandas dataframe for containing data. Rows are plate coordinates (e.g. A1) Columns are organised time (e.g. 0 hr, 2 hr)
     #initiating tables for each type of data
-    #print(extracted_data)
+
     for name, data_entry in extracted_data.items():
         relevant_table = all_plate_table_df[name] #selects table by name (e.g. OD600)
 
@@ -61,12 +61,13 @@ plate_table_df = pd.DataFrame(0.0, index = key_wells, columns = ["0"])
 all_plate_table_df = {}
 #print(plate_map)
 
-folder = "25-11-25_diya_temp_growth"
-name = "25-11-25_diya_temp_growth_incubator"
-filepaths = ["25-11-25_incubator_t0.xlsx",
-             "25-11-25_incubator_t4.xlsx",
-             "25-11-25_incubator_t10.xlsx",
-             "25-11-25_incubator_t24.xlsx"]
+folder = "25-11-06_diya_3/Red"
+name = "25-11-06_diya_3_red"
+filepaths = ["2025-11-05_red_t0.xlsx",
+             "2025-11-05_red_t4.xlsx",
+             "2025-11-05_red_t12.xlsx",
+             "2025-11-05_red_t27.xlsx",
+             "2025-11-05_red_t49.xlsx"]
 #filepath = "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_t0.xlsx"
 
 #extracting data
