@@ -61,13 +61,13 @@ plate_table_df = pd.DataFrame(0.0, index = key_wells, columns = ["0"])
 all_plate_table_df = {}
 #print(plate_map)
 
-folder = "25-11-06_diya_3/Red"
-name = "25-11-06_diya_3_red"
-filepaths = ["2025-11-05_red_t0.xlsx",
-             "2025-11-05_red_t4.xlsx",
-             "2025-11-05_red_t12.xlsx",
-             "2025-11-05_red_t27.xlsx",
-             "2025-11-05_red_t49.xlsx"]
+folder = "25-12-19_jbl127_new"
+name = "25-12-19_jbl127_new"
+filepaths = ["25-12-19_new_jbl137_t0.xlsx",
+             "25-12-19_new_jbl137_t4.xlsx",
+             "25-12-19_new_jbl137_t12.xlsx",
+             "25-12-19_new_jbl137_t24.xlsx",
+             ]
 #filepath = "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_t0.xlsx"
 
 #extracting data
