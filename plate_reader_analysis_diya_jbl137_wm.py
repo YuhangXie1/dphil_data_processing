@@ -536,6 +536,7 @@ def plot_all_timecourse(dataframe, y_data, ylabel: str | None = None, title: str
         plt.close(fig)
 
 
+"""
 plot_average_timecourse(sorted_data_df, "OD600", title_extra= "film on", save_image = True)
 plot_average_timecourse(sorted_data_df, "GFP395", title_extra= "film on", save_image = True)
 plot_average_timecourse(sorted_data_df, "GFP/OD600", title_extra= "film on", save_image = True)
@@ -544,10 +545,74 @@ plot_all_timecourse(sorted_data_df, "OD600", title_extra= "film on", save_image 
 plot_all_timecourse(sorted_data_df, "GFP395", title_extra= "film on", save_image = True)
 plot_all_timecourse(sorted_data_df, "GFP/OD600", title_extra= "film on", save_image = True)
 plot_all_timecourse(sorted_data_df, "GFP488", title_extra= "film on", save_image = True)
+"""
+
+#general plot by intensity
+
+def plot_by_intensity(dataframe):
+    by_intensity_df = dataframe[["cells","media","green_intensity","GFP395_average","GFP395_std"]].copy()
+    by_intensity_df["GFP395_average"] = by_intensity_df["GFP395_average"].apply(lambda x: x[-1])
+    by_intensity_df["GFP395_std"] = by_intensity_df["GFP395_std"].apply(lambda x: x[-1])
+    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+    by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
+
+    jbl_137 = by_intensity_df[by_intensity_df.index.str.contains('JBL137')]
+    jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
+    jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
+    jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
+    media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
 
 
 
+    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
 
+
+    fig, axs = plt.subplots()
+    for celltype in set(by_intensity_df["cells"]):
+        data_select_by_cell = by_intensity_df.loc[by_intensity_df["cells"] == celltype]
+
+        for media in set(data_select_by_cell["media"]):
+            data_select_by_media = data_select_by_cell.loc[by_intensity_df["media"] == media]
+
+            # plot with gradient color
+            x = data_select_by_media["green_intensity_percentage"].values
+            y = data_select_by_media["GFP395_average"].values
+            yerr = data_select_by_media["GFP395_std"].values
+
+            # Create line segments for gradient
+            points = np.array([x, y]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+            # Normalize x values for colormap
+            norm = plt.Normalize(x.min(), x.max())
+            lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+            lc.set_array(x)
+            axs.add_collection(lc)
+
+            # Add scatter points with gradient colors
+            scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
+
+            # Add error bars
+            axs.errorbar(x, y, yerr=yerr, fmt='none',
+                        ecolor= markercolor_map[celltype], alpha=1.0, capsize=2.0,
+                        marker = markerstyle_map[celltype],
+                        markerfacecolor = markercolor_map[celltype],
+                        markeredgecolor = markercolor_map[celltype],
+                        linestyle = linestyle_map[media])
+
+            # labels
+            x_axis = axs.set_xlabel("Green light intensity %")
+            x_axis.set_color("green")
+
+            axs.set_ylabel("GFP 395nm")
+            axs.set_title(f"GFP 395nm by intensity - average")
+            axs.legend(bbox_to_anchor=(1.0, 1.05))
+
+    fig.tight_layout()
+    plt.show()
+
+plot_by_intensity(sorted_data_df)
 
 #GFP by intensity - average
 
