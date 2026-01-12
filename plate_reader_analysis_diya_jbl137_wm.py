@@ -177,9 +177,9 @@ for key, item in plate_map.items():
 
 #filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 395nm.csv"]
 
-filepaths = ["26-01-07_new_jbl137_diya_wm/26-01-07_wm_film_extracted_GFP 395nm.csv",
-             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_film_extracted_GFP 488nm.csv", 
-             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_film_extracted_OD600.csv"]
+filepaths = ["26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 395nm.csv",
+             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 488nm.csv", 
+             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_OD600.csv"]
 
 
 #initiating data df
@@ -515,7 +515,6 @@ def plot_all_timecourse(dataframe, y_data, ylabel: str | None = None, title: str
         bbox_to_anchor=(1.02, 0.35),
         borderaxespad=0.0,
     )
-    
     axs.add_artist(leg3)
 
     axs.set_xlabel("Time (hrs)")
@@ -549,36 +548,55 @@ plot_all_timecourse(sorted_data_df, "GFP488", title_extra= "film on", save_image
 
 #general plot by intensity
 
-def plot_by_intensity(dataframe):
-    by_intensity_df = dataframe[["cells","media","green_intensity","GFP395_average","GFP395_std"]].copy()
-    by_intensity_df["GFP395_average"] = by_intensity_df["GFP395_average"].apply(lambda x: x[-1])
-    by_intensity_df["GFP395_std"] = by_intensity_df["GFP395_std"].apply(lambda x: x[-1])
+def plot_by_intensity_average(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        alpha_used = False, save_image = False, save_filepath = None):
+    
+    if ylabel is None:
+        ylabel = y_data
+
+    if title is None:
+        title = f"{ylabel} - by intensity - average - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+    if save_filepath is None:
+        save_filepath = save_file_path
+
+    by_intensity_df = dataframe[["cells","media","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std"]].copy()
+    by_intensity_df[f"{y_data}_average"] = by_intensity_df[f"{y_data}_average"].apply(lambda x: x[data_timearray_loc])
+    by_intensity_df[f"{y_data}_std"] = by_intensity_df[f"{y_data}_std"].apply(lambda x: x[data_timearray_loc])
     by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-    by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
-
-    jbl_137 = by_intensity_df[by_intensity_df.index.str.contains('JBL137')]
-    jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-    jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-    jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-    media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
-
-
+    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
 
     colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
     cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
 
     fig, axs = plt.subplots()
     for celltype in set(by_intensity_df["cells"]):
         data_select_by_cell = by_intensity_df.loc[by_intensity_df["cells"] == celltype]
 
         for media in set(data_select_by_cell["media"]):
-            data_select_by_media = data_select_by_cell.loc[by_intensity_df["media"] == media]
+            data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
 
             # plot with gradient color
-            x = data_select_by_media["green_intensity_percentage"].values
-            y = data_select_by_media["GFP395_average"].values
-            yerr = data_select_by_media["GFP395_std"].values
+            x = data_select_by_media["green_intensity_percentage"].values.copy()
+            y = data_select_by_media[f"{y_data}_average"].values.copy()
+            yerr = data_select_by_media[f"{y_data}_std"].values.copy()
+
+            # move final point (green=2.8 & red=0) to the right
+            is_final = (
+                (data_select_by_media["green_intensity"] == 2.8) &
+                (data_select_by_media["red_intensity"] == 0)
+            )
+
+            x[is_final.values] = x.max() + 10  # move to the right
+            
+            order = np.argsort(x)
+            x = x[order]
+            y = y[order]
+            yerr = yerr[order]
 
             # Create line segments for gradient
             points = np.array([x, y]).T.reshape(-1, 1, 2)
@@ -587,479 +605,320 @@ def plot_by_intensity(dataframe):
             # Normalize x values for colormap
             norm = plt.Normalize(x.min(), x.max())
             lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+            lc.set_linestyle(linestyle_map[media])
             lc.set_array(x)
             axs.add_collection(lc)
 
             # Add scatter points with gradient colors
-            scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
+            scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
+                                  marker = markerstyle_map[celltype],
+                                  facecolor = markercolor_map[celltype],
+                                  edgecolor = markercolor_map[celltype],
+                                  )
 
             # Add error bars
             axs.errorbar(x, y, yerr=yerr, fmt='none',
                         ecolor= markercolor_map[celltype], alpha=1.0, capsize=2.0,
-                        marker = markerstyle_map[celltype],
-                        markerfacecolor = markercolor_map[celltype],
-                        markeredgecolor = markercolor_map[celltype],
-                        linestyle = linestyle_map[media])
+                        )
 
-            # labels
-            x_axis = axs.set_xlabel("Green light intensity %")
-            x_axis.set_color("green")
+    # labels
+    leg1 = axs.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.00),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg1)
 
-            axs.set_ylabel("GFP 395nm")
-            axs.set_title(f"GFP 395nm by intensity - average")
-            axs.legend(bbox_to_anchor=(1.0, 1.05))
+    leg2 = axs.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg2)
+
+    x_axis = axs.set_xlabel(xlabel)
+    x_axis.set_color("green")
+
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+    if save_image == True:
+        try:
+            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+"""
+plot_by_intensity_average(sorted_data_df,"OD600", title_extra= "", save_image = True)
+plot_by_intensity_average(sorted_data_df,"GFP395", title_extra= "", save_image = True)
+plot_by_intensity_average(sorted_data_df,"GFP/OD600", title_extra= "", save_image = True)
+plot_by_intensity_average(sorted_data_df,"GFP488", title_extra= "", save_image = True)
+"""
+
+def plot_by_intensity_all(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        alpha_used = False, save_image = False, save_filepath = None):
+    
+    if ylabel is None:
+        ylabel = y_data
+
+    if title is None:
+        title = f"{ylabel} - by intensity - all - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+    if save_filepath is None:
+        save_filepath = save_file_path
+
+    by_intensity_df = dataframe[["cells","media","green_intensity","red_intensity",f"{y_data}_raw_array"]].copy()
+    by_intensity_df[f"{y_data}_raw_array"] = by_intensity_df[f"{y_data}_raw_array"].apply(lambda x: [array[data_timearray_loc] for array in x])
+    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
+
+    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+
+    fig, axs = plt.subplots()
+
+    for celltype in set(by_intensity_df["cells"]):
+        if celltype in plot_exclude["cells"]:
+            continue
+        data_select_by_cell = by_intensity_df.loc[by_intensity_df["cells"] == celltype]
+        
+        for media in set(data_select_by_cell["media"]):
+            if media in plot_exclude["media"]:
+                continue
+            data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
+
+            for i in range(len(data_select_by_media[f"{y_data}_raw_array"].iloc[0])):
+                # plot with gradient color
+                x = data_select_by_media["green_intensity_percentage"].values.copy()
+                y = np.array([row[i] for row in data_select_by_media[f"{y_data}_raw_array"]])
+
+                # move final point (green=2.8 & red=0) to the right
+                is_final = (
+                    (data_select_by_media["green_intensity"] == 2.8) &
+                    (data_select_by_media["red_intensity"] == 0)
+                )
+
+                x[is_final.values] = x.max() + 10  # move to the right
+                
+                order = np.argsort(x)
+                x = x[order]
+                y = y[order]
+
+                # Create line segments for gradient
+                points = np.array([x, y]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+                # Normalize x values for colormap
+                norm = plt.Normalize(x.min(), x.max())
+                lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+                lc.set_linestyle(linestyle_map[media])
+                lc.set_array(x)
+                axs.add_collection(lc)
+
+                # Add scatter points with gradient colors
+                scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
+                                    marker = markerstyle_map[celltype],
+                                    facecolor = markercolor_map[celltype],
+                                    edgecolor = markercolor_map[celltype],
+                                    )
+
+    # labels
+    leg1 = axs.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.00),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg1)
+
+    leg2 = axs.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg2)
+
+    x_axis = axs.set_xlabel(xlabel)
+    x_axis.set_color("green")
+
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+    if save_image == True:
+        try:
+            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+plot_exclude_override = {
+    "cells":[],
+    "media":["WM-met+"],
+    "green_intensity":[],
+    "red_intensity":[],
+}
+
+#plot_by_intensity_all(sorted_data_df,"OD600", -2, title_extra= "t12", save_image = True, plot_exclude=plot_exclude_override)
+#plot_by_intensity_all(sorted_data_df,"GFP395", -2,title_extra= "t12", save_image = True, plot_exclude=plot_exclude_override)
+#plot_by_intensity_all(sorted_data_df,"GFP/OD600", -2, title_extra= "t12", save_image = True, plot_exclude=plot_exclude_override)
+#plot_by_intensity_all(sorted_data_df,"GFP488", -2, title_extra= "t12", save_image = True, plot_exclude=plot_exclude_override)
+
+
+def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_select,
+                                   #plot_control,
+                                   ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        alpha_used = False, save_image = False, save_filepath = None):
+    
+    if ylabel is None:
+        ylabel = y_data
+
+    if title is None:
+        title = f"{ylabel} - by intensity - all - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+    if save_filepath is None:
+        save_filepath = save_file_path
+
+    by_intensity_df = dataframe[["cells","media","green_intensity","red_intensity",f"{y_data}_raw_array"]].copy()
+    by_intensity_df[f"{y_data}_raw_array"] = by_intensity_df[f"{y_data}_raw_array"].apply(lambda x: [array[data_timearray_loc] for array in x])
+    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
+
+    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+
+
+    data_select = by_intensity_df[by_intensity_df["cells"].isin(plot_select["cells"]) & by_intensity_df["media"].isin(plot_select["media"])]
+    n_positions = len(data_select[f"{y_data}_raw_array"].iloc[0]) if len(data_select) > 0 else 0
+    
+    #data_control = by_intensity_df[by_intensity_df["cells"].isin(plot_control["cells"]) and by_intensity_df["media"].isin(plot_control["media"])]
+
+    n_cols = 2  # 2 columns
+    n_rows = (n_positions + n_cols - 1) // n_cols  # Calculate rows needed
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(12, 4*n_rows))
+    axs = axs.flatten()  # Flatten to 1D array for easier indexing
+
+    for i in range(n_positions):
+        ax = axs[i]
+        x = data_select["green_intensity_percentage"].values.copy()
+        y = np.array([row[i] for row in data_select[f'{y_data}_raw_array']])
+
+        # move final point (green=2.8 & red=0) to the right
+        is_final = (
+            (data_select["green_intensity"] == 2.8) &
+            (data_select["red_intensity"] == 0)
+        )
+
+        x[is_final.values] = x.max() + 10  # move to the right
+        
+        order = np.argsort(x)
+        x = x[order]
+        y = y[order]
+
+        # Create line segments for gradient
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        # Normalize x values for colormap
+        media = plot_select["media"][0]
+        celltype = plot_select["cells"][0]
+
+        norm = plt.Normalize(x.min(), x.max())
+        lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+        lc.set_linestyle(linestyle_map[media])
+        lc.set_array(x)
+        ax.add_collection(lc)
+
+        # Add scatter points with gradient colors
+        scatter = ax.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
+                            marker = markerstyle_map[celltype],
+                            facecolor = markercolor_map[celltype],
+                            edgecolor = markercolor_map[celltype],
+                            )
+        
+        # Auto-scale to fit LineCollection
+        ax.autoscale()
+        ax.set_title(f"Repeat {i+1}", fontsize = 8)
+        ax.grid(True, alpha=0.3)
+
+    # labels
+    leg1 = ax.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.10),
+        borderaxespad=0.0,
+    )
+    ax.add_artist(leg1)
+
+    leg2 = ax.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    ax.add_artist(leg2)
+
+    fig.supxlabel(xlabel)
+    fig.supylabel(ylabel)
+    fig.suptitle(f"{ylabel} by intensity - all repeats separated", fontsize=14, y=1.00)
+
+    # Hide any unused subplots
+    for j in range(n_positions, len(axs)):
+        axs[j].axis('off')
 
     fig.tight_layout()
-    plt.show()
 
-plot_by_intensity(sorted_data_df)
+    if save_image == True:
+        try:
+            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+
+plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
+plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
+plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
+plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
+plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
+plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
+plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
+plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
 
-#GFP by intensity - average
-
-by_intensity_df = sorted_data_df[["green_intensity","GFP395_average","GFP395_std"]].copy()
-by_intensity_df["GFP395_average"] = by_intensity_df["GFP395_average"].apply(lambda x: x[-1])
-by_intensity_df["GFP395_std"] = by_intensity_df["GFP395_std"].apply(lambda x: x[-1])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
-
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
-
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-fig, axs = plt.subplots()
-
-
-""" axs.errorbar(jbl_new_data["green_intensity_percentage"], jbl_new_data["GFP395_average"],
-            yerr = jbl_new_data["GFP395_std"], capsize = 2.0,
-            label = "JBL001",
-            color = "black",
-            marker = "^", markersize = 3.0,
-            linestyle = "solid", linewidth = 1.0,
-            ) """
-
-# JCCO plot with gradient color
-x = jbl_kirill_data["green_intensity_percentage"].values
-y = jbl_kirill_data["GFP395_average"].values
-yerr = jbl_kirill_data["GFP395_std"].values
-
-# Create line segments for gradient
-points = np.array([x, y]).T.reshape(-1, 1, 2)
-segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-# Normalize x values for colormap
-norm = plt.Normalize(x.min(), x.max())
-lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-lc.set_array(x)
-axs.add_collection(lc)
-
-# Add scatter points with gradient colors
-scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
-
-# Add error bars for JCCO
-axs.errorbar(x, y, yerr=yerr, fmt='none', ecolor='gray', alpha=1.0, capsize=2.0)
-
-""" axs.errorbar(media_data["green_intensity_percentage"], media_data["GFP395_average"],
-            yerr = media_data["GFP395_std"], capsize = 2.0,
-            label = "media",
-            color = "black",
-            marker = "^", markersize = 3.0,
-            linestyle = "dotted", linewidth = 1.0,
-            ) """
-
-x_axis = axs.set_xlabel("Green light intensity %")
-x_axis.set_color("green")
-
-axs.set_ylabel("GFP 395nm")
-axs.set_title(f"GFP 395nm by intensity - average")
-axs.legend(bbox_to_anchor=(1.0, 1.05))
-
-fig.tight_layout()
-plt.show()
-
-
-
-#GFP/OD600 by intensity - average
-
-by_intensity_df = sorted_data_df[["green_intensity","GFP/OD600_average","GFP/OD600_std"]].copy()
-by_intensity_df["GFP/OD600_average"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[-1])
-by_intensity_df["GFP/OD600_std"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[-1])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
-
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
-
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-fig, axs = plt.subplots()
-
-
-""" axs.errorbar(jbl_data["green_intensity_percentage"], jbl_data["GFP/OD600_average"],
-            yerr = jbl_data["GFP/OD600_std"], capsize = 2.0,
-            label = "JBL001",
-            color = "black",
-            marker = "^", markersize = 3.0,
-            linestyle = "solid", linewidth = 1.0,
-            ) """
-
-""" axs.errorbar(jcco_data["green_intensity_percentage"], jcco_data["GFP/OD600_average"],
-            yerr = jcco_data["GFP/OD600_std"], capsize = 2.0,
-            label = "JCCO",
-            #color = "blue",
-            marker = "o", markersize = 3.0,
-            linestyle = "solid", linewidth = 1.0,
-            cmap = cmap,
-            ) """
-
-# JCCO plot with gradient color
-x = jbl_kirill_data["green_intensity_percentage"].values
-y = jbl_kirill_data["GFP/OD600_average"].values
-yerr = jbl_kirill_data["GFP/OD600_std"].values
-
-# Create line segments for gradient
-points = np.array([x, y]).T.reshape(-1, 1, 2)
-segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-# Normalize x values for colormap
-norm = plt.Normalize(x.min(), x.max())
-lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-lc.set_array(x)
-axs.add_collection(lc)
-
-# Add scatter points with gradient colors
-scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
-
-# Add error bars for JCCO
-axs.errorbar(x, y, yerr=yerr, fmt='none', ecolor='gray', alpha=1.0, capsize=2.0)
-
-""" axs.errorbar(media_data["green_intensity_percentage"], media_data["GFP/OD600_average"],
-            yerr = media_data["GFP/OD600_std"], capsize = 2.0,
-            label = "media",
-            color = "black",
-            marker = "^", markersize = 3.0,
-            linestyle = "dotted", linewidth = 1.0,
-            )
- """
-x_axis = axs.set_xlabel("Green light intensity %")
-x_axis.set_color("green")
-
-axs.set_ylabel("GFP 395nm/OD600")
-axs.set_title(f"GFP 395nm/OD600 by intensity - average")
-axs.legend(bbox_to_anchor=(1.0, 1.05))
-
-fig.tight_layout()
-plt.show()
-
-
-#OD600 by intensity - average
-
-by_intensity_df = sorted_data_df[["green_intensity","OD600_average","OD600_std"]].copy()
-by_intensity_df["OD600_average"] = by_intensity_df["OD600_average"].apply(lambda x: x[-1])
-by_intensity_df["OD600_std"] = by_intensity_df["OD600_std"].apply(lambda x: x[-1])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
-
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
-
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-fig, axs = plt.subplots()
-
-# JCCO plot with gradient color
-x = jbl_kirill_data["green_intensity_percentage"].values
-y = jbl_kirill_data["OD600_average"].values
-yerr = jbl_kirill_data["OD600_std"].values
-
-# Create line segments for gradient
-points = np.array([x, y]).T.reshape(-1, 1, 2)
-segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-# Normalize x values for colormap
-norm = plt.Normalize(x.min(), x.max())
-lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-lc.set_array(x)
-axs.add_collection(lc)
-
-# Add scatter points with gradient colors
-scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
-
-# Add error bars for JCCO
-axs.errorbar(x, y, yerr=yerr, fmt='none', ecolor='gray', alpha=1.0, capsize=2.0)
-
-
-x_axis = axs.set_xlabel("Green light intensity %")
-x_axis.set_color("green")
-
-axs.set_ylabel("OD600")
-axs.set_title(f"OD600 by intensity - average")
-axs.legend(bbox_to_anchor=(1.0, 1.05))
-
-fig.tight_layout()
-plt.show()
-
-#GFP by intensity - all
-by_intensity_df = sorted_data_df[["green_intensity","GFP395_raw_array"]].copy()
-by_intensity_df["GFP395_raw_array"] = by_intensity_df["GFP395_raw_array"].apply(lambda x: [array[-1] for array in x])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
-
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
-
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-fig, axs = plt.subplots()
-
-for i in range(len(jbl_hybrid_data["GFP395_raw_array"].iloc[0])):
-
-    # JCCO plot with gradient color
-    x = jbl_hybrid_data["green_intensity_percentage"].values
-    y = np.array([row[i] for row in jbl_hybrid_data['GFP395_raw_array']])
-
-    # Create line segments for gradient
-    points = np.array([x, y]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-    # Normalize x values for colormap
-    norm = plt.Normalize(x.min(), x.max())
-    lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-    lc.set_array(x)
-    axs.add_collection(lc)
-
-    # Add scatter points with gradient colors
-    label_jcco = f'jbl_new_data' if i == 0 else None   
-    scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
-
-""" for i in range(len(jbl_data["GFP395_raw_array"].iloc[0])):
-    axs.plot(jbl_data["green_intensity_percentage"], [row[i] for row in jbl_data['GFP395_raw_array']],
-                label = "JBL001" if i == 0 else None,
-                color = "black",
-                marker = "^", markersize = 3.0,
-                linestyle = "solid", linewidth = 1.0,
-                ) """
-
-x_axis = axs.set_xlabel("Green light intensity %")
-x_axis.set_color("green")
-
-axs.set_ylabel("GFP 395nm")
-axs.set_title(f"GFP 395nm by intensity - all")
-axs.legend(bbox_to_anchor=(1.0, 1.05))
-
-fig.tight_layout()
-plt.show()
-
-
-#GFP by intensity - all positions in separate subplots
-
-by_intensity_df = sorted_data_df[["green_intensity","GFP395_raw_array"]].copy()
-by_intensity_df["GFP395_raw_array"] = by_intensity_df["GFP395_raw_array"].apply(lambda x: [array[-1] for array in x])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
-
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
-
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-# Get max number of positions across all datasets
-n_jcco = len(jbl_kirill_data["GFP395_raw_array"].iloc[0]) if len(jbl_kirill_data) > 0 else 0
-#n_jbl = len(jbl_data["GFP395_raw_array"].iloc[0]) if len(jbl_data) > 0 else 0
-#n_media = len(media_data["GFP395_raw_array"].iloc[0]) if len(media_data) > 0 else 0
-n_positions = n_jcco
-
-# Create subplots - adjust rows and cols as needed
-n_cols = 2  # 2 columns
-n_rows = (n_positions + n_cols - 1) // n_cols  # Calculate rows needed
-fig, axs = plt.subplots(n_rows, n_cols, figsize=(12, 4*n_rows))
-axs = axs.flatten()  # Flatten to 1D array for easier indexing
-
-for i in range(n_positions):
-    ax = axs[i]
-    
-    # JCCO plot with gradient color
-    if i < n_jcco:
-        x = jbl_kirill_data["green_intensity_percentage"].values
-        y = np.array([row[i] for row in jbl_kirill_data['GFP395_raw_array']])
-
-        # Create line segments for gradient
-        points = np.array([x, y]).T.reshape(-1, 1, 2)
-        segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-        # Normalize x values for colormap
-        norm = plt.Normalize(x.min(), x.max())
-        lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-        lc.set_array(x)
-        ax.add_collection(lc)
-
-        # Add scatter points with gradient colors
-        scatter = ax.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
-
-    # Auto-scale to fit LineCollection
-    ax.autoscale()
-    
-    # Set labels for each subplot
-    ax.set_xlabel("Green light intensity %", color="green")
-    ax.set_ylabel("GFP 395nm")
-    ax.set_title(f"Position {i+1}")
-    ax.legend(loc='best')
-    ax.grid(True, alpha=0.3)
-    
-
-# Hide any unused subplots
-for j in range(n_positions, len(axs)):
-    axs[j].axis('off')
-
-fig.suptitle("GFP 395nm by intensity - all positions", fontsize=14, y=1.00)
-fig.tight_layout()
-plt.show()
-
-
-
-#GFP/OD600 by intensity - all
-by_intensity_df = sorted_data_df[["green_intensity","GFP/OD600_raw"]].copy()
-by_intensity_df["GFP/OD600_raw"] = by_intensity_df["GFP/OD600_raw"].apply(lambda x: [array[-1] for array in x])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
-
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
-
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-fig, axs = plt.subplots()
-
-for i in range(len(jbl_kirill_data["GFP/OD600_raw"].iloc[0])):
-
-    # JCCO plot with gradient color
-    x = jbl_kirill_data["green_intensity_percentage"].values
-    y = np.array([row[i] for row in jbl_kirill_data['GFP/OD600_raw']])
-
-    # Create line segments for gradient
-    points = np.array([x, y]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-    # Normalize x values for colormap
-    norm = plt.Normalize(x.min(), x.max())
-    lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-    lc.set_array(x)
-    axs.add_collection(lc)
-
-    # Add scatter points with gradient colors
-    label_jcco = f'JCCO' if i == 0 else None   
-    scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
-
-""" for i in range(len(jbl_data["GFP/OD600_raw"].iloc[0])):
-    axs.plot(jbl_data["green_intensity_percentage"], [row[i] for row in jbl_data['GFP/OD600_raw']],
-                label = "JBL001" if i == 0 else None,
-                color = "black",
-                marker = "^", markersize = 3.0,
-                linestyle = "solid", linewidth = 1.0,
-                ) """
-
-x_axis = axs.set_xlabel("Green light intensity %")
-x_axis.set_color("green")
-
-axs.set_ylabel("GFP/OD600")
-axs.set_title(f"GFP/OD600 by intensity - all")
-axs.legend(bbox_to_anchor=(1.0, 1.05))
-
-fig.tight_layout()
-plt.show()
-
-
-#GFP by intensity - all positions in separate subplots
-
-by_intensity_df = sorted_data_df[["green_intensity","GFP/OD600_raw"]].copy()
-by_intensity_df["GFP/OD600_raw"] = by_intensity_df["GFP/OD600_raw"].apply(lambda x: [array[-1] for array in x])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
-
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
-
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-# Get max number of positions across all datasets
-n_jcco = len(jbl_kirill_data["GFP/OD600_raw"].iloc[0]) if len(jbl_kirill_data) > 0 else 0
-#n_jbl = len(jbl_data["GFP/OD600_raw"].iloc[0]) if len(jbl_data) > 0 else 0
-#n_media = len(media_data["GFP/OD600_raw"].iloc[0]) if len(media_data) > 0 else 0
-n_positions = n_jcco
-
-# Create subplots - adjust rows and cols as needed
-n_cols = 2  # 2 columns
-n_rows = (n_positions + n_cols - 1) // n_cols  # Calculate rows needed
-fig, axs = plt.subplots(n_rows, n_cols, figsize=(12, 4*n_rows))
-axs = axs.flatten()  # Flatten to 1D array for easier indexing
-
-for i in range(n_positions):
-    ax = axs[i]
-    
-    # JCCO plot with gradient color
-    if i < n_jcco:
-        x = jbl_kirill_data["green_intensity_percentage"].values
-        y = np.array([row[i] for row in jbl_kirill_data['GFP/OD600_raw']])
-
-        # Create line segments for gradient
-        points = np.array([x, y]).T.reshape(-1, 1, 2)
-        segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-        # Normalize x values for colormap
-        norm = plt.Normalize(x.min(), x.max())
-        lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-        lc.set_array(x)
-        ax.add_collection(lc)
-
-        # Add scatter points with gradient colors
-        scatter = ax.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
-
-    # Auto-scale to fit LineCollection
-    ax.autoscale()
-    
-    # Set labels for each subplot
-    ax.set_xlabel("Green light intensity %", color="green")
-    ax.set_ylabel("GFP/OD600")
-    ax.set_title(f"Position {i+1}")
-    ax.legend(loc='best')
-    ax.grid(True, alpha=0.3)
-    
-
-# Hide any unused subplots
-for j in range(n_positions, len(axs)):
-    axs[j].axis('off')
-
-fig.suptitle("GFP/OD600 by intensity - all positions", fontsize=14, y=1.00)
-fig.tight_layout()
-plt.show()
 
 
 
