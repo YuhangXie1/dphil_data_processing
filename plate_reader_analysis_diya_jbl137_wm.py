@@ -177,9 +177,9 @@ for key, item in plate_map.items():
 
 #filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 395nm.csv"]
 
-filepaths = ["26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 395nm.csv",
-             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 488nm.csv", 
-             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_OD600.csv"]
+filepaths = ["26-01-07_new_jbl137_diya_wm/26-01-07_wm_film_extracted_GFP 395nm.csv",
+             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_film_extracted_GFP 488nm.csv", 
+             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_film_extracted_OD600.csv"]
 
 
 #initiating data df
@@ -288,8 +288,8 @@ line_alpha_map = {green_intensity : line_alpha(green_intensity) for green_intens
 
 
 plot_exclude = {
-    "cells":["JBL001","media"],
-    "media":[],
+    "cells":[],
+    "media":["WM-met-"],
     "green_intensity":[],
     "red_intensity":[],
 }
@@ -362,7 +362,7 @@ media_handles = [
 
 
 
-def plot_average_timecourse(dataframe, y_data, ylabel: str | None = None, title: str | None = None, xlabel = "Time (hrs)",
+def plot_average_timecourse(dataframe, y_data, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Time (hrs)",
                             plot_exclude = plot_exclude, markerstyle_map = markerstyle_map, markercolor_map = markercolor_map,
                             linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
                             alpha_used = False, save_image = False, save_filepath = None):
@@ -371,7 +371,9 @@ def plot_average_timecourse(dataframe, y_data, ylabel: str | None = None, title:
         ylabel = y_data
 
     if title is None:
-        title = f"{ylabel} - average"
+        title = f"{ylabel} - average - {title_extra}"
+    else:
+        title = title + " - " + title_extra
 
     if alpha_used == True:
         alpha = line_alpha_map[index_name_green_intensity]
@@ -448,7 +450,7 @@ def plot_average_timecourse(dataframe, y_data, ylabel: str | None = None, title:
         plt.close(fig)
 
 
-def plot_all_timecourse(dataframe, y_data, ylabel: str | None = None, title: str | None = None, xlabel = "Time (hrs)",
+def plot_all_timecourse(dataframe, y_data, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Time (hrs)",
                             plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
                             linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
                             alpha_used = False, save_image = False, save_filepath = None):
@@ -457,7 +459,9 @@ def plot_all_timecourse(dataframe, y_data, ylabel: str | None = None, title: str
         ylabel = y_data
 
     if title is None:
-        title = f"{ylabel} - all"
+        title = f"{ylabel} - all - {title_extra}"
+    else:
+        title = title + " - " + title_extra
 
     if alpha_used == True:
         alpha = line_alpha_map[index_name_green_intensity]
@@ -532,14 +536,14 @@ def plot_all_timecourse(dataframe, y_data, ylabel: str | None = None, title: str
         plt.close(fig)
 
 
-plot_average_timecourse(sorted_data_df, "OD600", save_image = True)
-plot_average_timecourse(sorted_data_df, "GFP395", save_image = True)
-plot_average_timecourse(sorted_data_df, "GFP/OD600", save_image = True)
-plot_average_timecourse(sorted_data_df, "GFP488", save_image = True)
-plot_all_timecourse(sorted_data_df, "OD600", save_image = True)
-plot_all_timecourse(sorted_data_df, "GFP395", save_image = True)
-plot_all_timecourse(sorted_data_df, "GFP/OD600", save_image = True)
-plot_all_timecourse(sorted_data_df, "GFP488", save_image = True)
+plot_average_timecourse(sorted_data_df, "OD600", title_extra= "film on", save_image = True)
+plot_average_timecourse(sorted_data_df, "GFP395", title_extra= "film on", save_image = True)
+plot_average_timecourse(sorted_data_df, "GFP/OD600", title_extra= "film on", save_image = True)
+plot_average_timecourse(sorted_data_df, "GFP488", title_extra= "film on", save_image = True)
+plot_all_timecourse(sorted_data_df, "OD600", title_extra= "film on", save_image = True)
+plot_all_timecourse(sorted_data_df, "GFP395", title_extra= "film on", save_image = True)
+plot_all_timecourse(sorted_data_df, "GFP/OD600", title_extra= "film on", save_image = True)
+plot_all_timecourse(sorted_data_df, "GFP488", title_extra= "film on", save_image = True)
 
 
 
