@@ -10,6 +10,7 @@ from datetime import datetime
 from os import listdir, path
 import re
 from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.colors as mcolors
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 from enum import Enum
@@ -911,89 +912,147 @@ def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_s
 
 
 plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
-plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
-plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
-plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
+#plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
+#plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
+#plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
 plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
-plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
-plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
-plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
+#plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
+#plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
+#plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
 
 
 
 
 ####
 #GFP by intensity - average over time
+def plot_by_intensity_average_over_time(dataframe, y_data, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        alpha_used = False, save_image = False, save_filepath = None):
+    
+    if ylabel is None:
+        ylabel = y_data
 
-by_intensity_df = sorted_data_df[["green_intensity","GFP/OD600_average","GFP/OD600_std"]].copy()
-by_intensity_df["GFP/OD600_average_t0"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[0])
-by_intensity_df["GFP/OD600_average_t4"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[1])
-by_intensity_df["GFP/OD600_average_t12"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[2])
-by_intensity_df["GFP/OD600_average_t24"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[3])
-by_intensity_df["GFP/OD600_std_t0"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[0])
-by_intensity_df["GFP/OD600_std_t4"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[1])
-by_intensity_df["GFP/OD600_std_t12"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[2])
-by_intensity_df["GFP/OD600_std_t24"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[3])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
+    if title is None:
+        title = f"{ylabel} - by intensity - averages over time - {title_extra}"
+    else:
+        title = title + " - " + title_extra
 
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
+    if save_filepath is None:
+        save_filepath = save_file_path
 
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+    by_intensity_df = dataframe[["cells","media","timepoints","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std"]].copy()
+    by_intensity_df[f"{y_data}_average"] = by_intensity_df[f"{y_data}_average"]
+    by_intensity_df[f"{y_data}_std"] = by_intensity_df[f"{y_data}_std"]
+    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
 
-fig, axs = plt.subplots()
+    times = by_intensity_df["timepoints"][0]
+    times_rounded = [round(x) for x in times]
 
-err_color = {"t0": "red",
-             "t4": "orange",
-             "t12": "green",
-             "t24": "blue"}
+    err_norm = mcolors.Normalize(vmin=min(times), vmax=max(times))
+    err_cmap = plt.cm.hsv
+    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
 
-for i in ["t0","t4","t12","t24"]:
+    fig, axs = plt.subplots()
+    for celltype in set(by_intensity_df["cells"]):
+        data_select_by_cell = by_intensity_df.loc[by_intensity_df["cells"] == celltype]
 
-    axs.errorbar(jbl_kirill_data["green_intensity_percentage"],
-                 jbl_kirill_data["GFP/OD600_average"+"_"+i],
-                yerr = jbl_kirill_data["GFP/OD600_std"+"_"+i], capsize = 2.0,
-                color = "black",
-                ecolor=err_color[i],
-                marker = "^", markersize = 3.0,
-                linestyle = "solid", linewidth = 1.0,
+        for media in set(data_select_by_cell["media"]):
+            data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
+
+            for i in range(len(times_rounded)):
+                data_select_by_time = by_intensity_df.copy().apply(lambda x: x[i])
+                # selecting data based on time
+
+                # plot with gradient color
+                x = data_select_by_media["green_intensity_percentage"].values.copy()
+                y = data_select_by_time[f"{y_data}_average"]
+                yerr = data_select_by_time[f"{y_data}_std"]
+
+                # move final point (green=2.8 & red=0) to the right
+                is_final = (
+                    (data_select_by_media["green_intensity"] == 2.8) &
+                    (data_select_by_media["red_intensity"] == 0)
                 )
 
-    # JCCO plot with gradient color
-    x = jbl_kirill_data["green_intensity_percentage"].values
-    y = jbl_kirill_data["GFP/OD600_average"+"_"+i].values
-    yerr = jbl_kirill_data["GFP/OD600_std"+"_"+i].values
+                x[is_final.values] = x.max() + 10  # move to the right
+                
+                order = np.argsort(x)
+                x = x[order]
+                y = y[order]
+                yerr = yerr[order]
 
-    # Create line segments for gradient
-    points = np.array([x, y]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+                # Create line segments for gradient
+                points = np.array([x, y]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-    # Normalize x values for colormap
-    norm = plt.Normalize(x.min(), x.max())
-    lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-    lc.set_array(x)
-    axs.add_collection(lc)
+                # Normalize x values for colormap
+                norm = plt.Normalize(x.min(), x.max())
+                lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+                lc.set_linestyle(linestyle_map[media])
+                lc.set_array(x)
+                axs.add_collection(lc)
 
-    # Add scatter points with gradient colors
-    scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
+                # Add scatter points with gradient colors
+                scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
+                                    marker = markerstyle_map[celltype],
+                                    facecolor = markercolor_map[celltype],
+                                    edgecolor = markercolor_map[celltype],
+                                    )
 
-    # Add error bars for JCCO
-    axs.errorbar(x, y, yerr=yerr, fmt='none', ecolor=err_color[i], alpha=1.0, capsize=2.0, label = i)
+                # Add error bars
+                err_color = err_cmap(err_norm(times_rounded[i]))
+                axs.errorbar(x, y, yerr=yerr, fmt='none',
+                            ecolor= err_color, alpha=1.0, capsize=2.0,
+                            label = "t"+ str(times_rounded[i]),
+                            )
 
-x_axis = axs.set_xlabel("Green light intensity %")
-x_axis.set_color("green")
+    # labels
+    leg1 = axs.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.00),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg1)
 
-axs.set_ylabel("GFP 395nm/OD600")
-axs.set_title(f"GFP 395nm/OD600 by intensity - average over time")
-axs.legend(bbox_to_anchor=(1.0, 1.05))
+    leg2 = axs.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg2)
 
-fig.tight_layout()
-plt.show()
+    x_axis = axs.set_xlabel(xlabel)
+    x_axis.set_color("green")
+
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+    if save_image == True:
+        try:
+            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+
+plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
+plot_by_intensity_average_over_time(sorted_data_df, "GFP/OD600", plot_select_override, title_extra="WM-met-", save_image=False)
+
+
+
 
 
 ####
