@@ -925,7 +925,7 @@ plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
 
 ####
 #GFP by intensity - average over time
-def plot_by_intensity_average_over_time(dataframe, y_data, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
                         plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
                         linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
                         alpha_used = False, save_image = False, save_filepath = None):
@@ -942,8 +942,6 @@ def plot_by_intensity_average_over_time(dataframe, y_data, ylabel: str | None = 
         save_filepath = save_file_path
 
     by_intensity_df = dataframe[["cells","media","timepoints","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std"]].copy()
-    by_intensity_df[f"{y_data}_average"] = by_intensity_df[f"{y_data}_average"]
-    by_intensity_df[f"{y_data}_std"] = by_intensity_df[f"{y_data}_std"]
     by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
     by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
 
@@ -951,25 +949,40 @@ def plot_by_intensity_average_over_time(dataframe, y_data, ylabel: str | None = 
     times_rounded = [round(x) for x in times]
 
     err_norm = mcolors.Normalize(vmin=min(times), vmax=max(times))
-    err_cmap = plt.cm.hsv
+    err_cmap = plt.cm.tab20c
     colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
     cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
 
+    errorbar_handles = []
+    for t in times_rounded:
+        color = err_cmap(err_norm(t))
+        handle = Line2D(
+            [0], [0],
+            color=color,
+            linewidth=2,
+            linestyle='-',
+            label=f"t{t}"
+            )
+        errorbar_handles.append(handle)
+
+    data_select = by_intensity_df[by_intensity_df["cells"].isin(plot_select["cells"]) & by_intensity_df["media"].isin(plot_select["media"])]
     fig, axs = plt.subplots()
-    for celltype in set(by_intensity_df["cells"]):
-        data_select_by_cell = by_intensity_df.loc[by_intensity_df["cells"] == celltype]
+
+    for celltype in set(data_select["cells"]):
+        data_select_by_cell = data_select.loc[data_select["cells"] == celltype]
 
         for media in set(data_select_by_cell["media"]):
             data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
 
             for i in range(len(times_rounded)):
-                data_select_by_time = by_intensity_df.copy().apply(lambda x: x[i])
+                data_select_by_time_avg = data_select_by_media[f"{y_data}_average"].copy().apply(lambda x: x[i])
+                data_select_by_time_std = data_select_by_media[f"{y_data}_std"].copy().apply(lambda x: x[i])
                 # selecting data based on time
 
                 # plot with gradient color
                 x = data_select_by_media["green_intensity_percentage"].values.copy()
-                y = data_select_by_time[f"{y_data}_average"]
-                yerr = data_select_by_time[f"{y_data}_std"]
+                y = data_select_by_time_avg
+                yerr = data_select_by_time_std
 
                 # move final point (green=2.8 & red=0) to the right
                 is_final = (
@@ -1028,6 +1041,15 @@ def plot_by_intensity_average_over_time(dataframe, y_data, ylabel: str | None = 
     )
     axs.add_artist(leg2)
 
+    leg3 = axs.legend(
+        handles=errorbar_handles,
+        title="Time (error bars)",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.30),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg3)
+
     x_axis = axs.set_xlabel(xlabel)
     x_axis.set_color("green")
 
@@ -1048,8 +1070,8 @@ def plot_by_intensity_average_over_time(dataframe, y_data, ylabel: str | None = 
         plt.close(fig)
 
 
-plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
-plot_by_intensity_average_over_time(sorted_data_df, "GFP/OD600", plot_select_override, title_extra="WM-met-", save_image=False)
+plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
+#plot_by_intensity_average_over_time(sorted_data_df, "OD600", plot_select_override, title_extra="WM-met-", save_image=False)
 
 
 
@@ -1058,72 +1080,257 @@ plot_by_intensity_average_over_time(sorted_data_df, "GFP/OD600", plot_select_ove
 ####
 #GFP/OD by intensity - average over cell type at 24hr
 
-by_intensity_df = sorted_data_df[["green_intensity","GFP/OD600_average","GFP/OD600_std"]].copy()
-by_intensity_df["GFP/OD600_average"] = by_intensity_df["GFP/OD600_average"].apply(lambda x: x[-1])
-by_intensity_df["GFP/OD600_std"] = by_intensity_df["GFP/OD600_std"].apply(lambda x: x[-1])
-by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-by_intensity_df = by_intensity_df[~by_intensity_df.index.str.contains('-1')]
+#GFP by intensity - average over time
+def plot_by_intensity_average_over_cells(dataframe, y_data, data_timearray_loc, plot_select, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        alpha_used = False, save_image = False, save_filepath = None):
+    
+    if ylabel is None:
+        ylabel = y_data
 
-jbl_new_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137new')]
-jbl_hybrid_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137hybrid')]
-jbl_kirill_data = by_intensity_df[by_intensity_df.index.str.contains('JBL137kirill')]
-jcco_data = by_intensity_df[by_intensity_df.index.str.contains('JCCO')]
-media_data = by_intensity_df[by_intensity_df.index.str.contains('media')]
+    if title is None:
+        title = f"{ylabel} - by intensity - averages over cell type - {title_extra}"
+    else:
+        title = title + " - " + title_extra
 
-colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+    if save_filepath is None:
+        save_filepath = save_file_path
 
-fig, axs = plt.subplots()
+    by_intensity_df = dataframe[["cells","media","timepoints","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std"]].copy()
+    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
 
-err_color = {"JBL137_new": "red",
-             "JBL137_hybrid": "orange",
-             "JBL137_kirills": "green",
-             "JCCO": "blue"}
+    times = by_intensity_df["timepoints"][0]
+    times_rounded = [round(x) for x in times]
 
-cell_df = {"JBL137_new": jbl_new_data,
-             "JBL137_hybrid": jbl_hybrid_data,
-             "JBL137_kirills": jbl_kirill_data,
-             "JCCO": jcco_data}
+    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
 
-for i in ["JBL137_new","JBL137_hybrid","JBL137_kirills","JCCO"]:
+    data_select = by_intensity_df[by_intensity_df["cells"].isin(plot_select["cells"]) & by_intensity_df["media"].isin(plot_select["media"])]
+    fig, axs = plt.subplots()
 
-    axs.errorbar(cell_df[i]["green_intensity_percentage"],
-                 cell_df[i]["GFP/OD600_average"],
-                yerr = cell_df[i]["GFP/OD600_std"], capsize = 2.0,
-                color = err_color[i],
-                ecolor= err_color[i],
-                marker = "^", markersize = 3.0,
-                linestyle = "solid", linewidth = 1.0,
-                label = i,
-                )
+    for celltype in set(data_select["cells"]):
+        data_select_by_cell = data_select.loc[data_select["cells"] == celltype]
 
-    # JCCO plot with gradient color
-    x = cell_df[i]["green_intensity_percentage"].values
-    y = cell_df[i]["GFP/OD600_average"].values
-    yerr = cell_df[i]["GFP/OD600_std"].values
+        for media in set(data_select_by_cell["media"]):
+            data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
 
-    # Create line segments for gradient
-    points = np.array([x, y]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            data_select_by_time_avg = data_select_by_media[f"{y_data}_average"].copy().apply(lambda x: x[data_timearray_loc])
+            data_select_by_time_std = data_select_by_media[f"{y_data}_std"].copy().apply(lambda x: x[data_timearray_loc])
+            # selecting data based on time
 
-    # Normalize x values for colormap
-    norm = plt.Normalize(x.min(), x.max())
-    lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-    lc.set_array(x)
-    axs.add_collection(lc)
+            # plot with gradient color
+            x = data_select_by_media["green_intensity_percentage"].values.copy()
+            y = data_select_by_time_avg
+            yerr = data_select_by_time_std
 
-    # Add scatter points with gradient colors
-    scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5, marker='o')
+            # move final point (green=2.8 & red=0) to the right
+            is_final = (
+                (data_select_by_media["green_intensity"] == 2.8) &
+                (data_select_by_media["red_intensity"] == 0)
+            )
 
-    # Add error bars for JCCO
-    axs.errorbar(x, y, yerr=yerr, fmt='none', ecolor=err_color[i], alpha=1.0, capsize=2.0, label = i)
+            x[is_final.values] = x.max() + 10  # move to the right
+            
+            order = np.argsort(x)
+            x = x[order]
+            y = y[order]
+            yerr = yerr[order]
 
-x_axis = axs.set_xlabel("Green light intensity %")
-x_axis.set_color("green")
+            # Create line segments for gradient
+            points = np.array([x, y]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-axs.set_ylabel("GFP 395nm/OD600")
-axs.set_title(f"GFP 395nm/OD600 by intensity - average over cell type")
-axs.legend(bbox_to_anchor=(1.0, 1.05))
+            # Normalize x values for colormap
+            norm = plt.Normalize(x.min(), x.max())
+            lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+            lc.set_linestyle(linestyle_map[media])
+            lc.set_array(x)
+            axs.add_collection(lc)
 
-fig.tight_layout()
-plt.show()
+            # Add scatter points with gradient colors
+            scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
+                                marker = markerstyle_map[celltype],
+                                facecolor = markercolor_map[celltype],
+                                edgecolor = markercolor_map[celltype],
+                                )
+
+            # Add error bars
+            err_color = markercolor_map[celltype]
+            axs.errorbar(x, y, yerr=yerr, fmt='none',
+                        ecolor= err_color, alpha=1.0, capsize=2.0,
+                        )
+
+    # labels
+    leg1 = axs.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.00),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg1)
+
+    leg2 = axs.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg2)
+
+    x_axis = axs.set_xlabel(xlabel)
+    x_axis.set_color("green")
+
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+    if save_image == True:
+        try:
+            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+plot_select_override = {"cells":["JBL001","JBL137","media"],"media":["WM-met-", "WM-met+"]}
+#plot_by_intensity_average_over_cells(sorted_data_df, "OD600", -2, plot_select_override, title_extra="", save_image=False)
+
+
+
+
+
+
+def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        alpha_used = False, save_image = False, save_filepath = None):
+#calculating fold changes
+    if ylabel is None:
+        ylabel = y_data
+
+    if title is None:
+        title = f"{ylabel} - by intensity - fold change - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+    if save_filepath is None:
+        save_filepath = save_file_path
+
+
+
+    data_select = dataframe[["cells","media", "green_intensity", "red_intensity",f"{y_data}_average",f"{y_data}_std"]]
+    data_select["avg_select"] = data_select[f"{y_data}_average"].copy().apply(lambda x: x[data_timearray_loc])
+    data_select["std_select"] = data_select[f"{y_data}_std"].copy().apply(lambda x: x[data_timearray_loc])
+
+    media_row = data_select.loc[data_select["cells"] == "media"]
+    media_value = media_row[f"{y_data}_average"].copy().apply(lambda x: x[data_timearray_loc])
+
+    data_select["avg_normalised"] = data_select["avg_select"] - media_value.values
+    data_select = data_select[data_select["cells"] != "media"]
+
+    met_plus_df = data_select[data_select["media"] == "WM-met+"].copy()
+    met_minus_df = data_select[data_select["media"] == "WM-met-"].copy()
+
+    met_plus_df = met_plus_df[["cells", "green_intensity", "red_intensity", "avg_normalised", "std_select"]].rename(
+        columns={"avg_normalised": "avg_met_plus", "std_select": "std_met_plus"}
+    )
+    met_minus_df = met_minus_df[["cells", "green_intensity", "red_intensity", "avg_normalised", "std_select"]].rename(
+        columns={"avg_normalised": "avg_met_minus", "std_select": "std_met_minus"}
+    )
+
+    paired = pd.merge(
+        met_minus_df,
+        met_plus_df,
+        on=["cells", "green_intensity", "red_intensity"],
+        how="inner"  # use 'outer' to keep unpaired rows if you want to inspect them
+    )
+
+    paired["fold_change"] = paired["avg_met_plus"] / paired["avg_met_minus"]
+    paired["fc_std"] = paired["fold_change"] * np.sqrt(
+        (paired["std_met_minus"] / paired["avg_met_minus"].replace(0, np.nan))**2 +
+        (paired["std_met_plus"]  / paired["avg_met_plus"])**2
+    )
+
+    paired["green_intensity_percentage"] = paired["green_intensity"].apply(lambda x: 100*x/2.8)
+
+    cells = paired["cells"].unique()
+    palette = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+
+    fig, ax = plt.subplots(figsize=(7,5))
+
+    for ci, cell in enumerate(cells):
+        dfc = paired[paired["cells"] == cell].copy()
+        if dfc.empty:
+            continue
+
+        # base x
+        x = dfc["green_intensity_percentage"].to_numpy(dtype=float)
+
+        # shift where red intensity == 0 by +10
+        final_mask = dfc["red_intensity"].to_numpy(dtype=float) == 0
+        x_shift = x.copy()
+        x_shift[final_mask] = x_shift[final_mask] + 10.0
+
+        # y and yerr
+        y = dfc["fold_change"].to_numpy(dtype=float)
+        yerr = dfc["fc_std"].to_numpy(dtype=float)
+
+        # sort by x_shift so lines look correct left->right
+        order = np.argsort(x_shift)
+        x_s = x_shift[order]
+        y_s = y[order]
+        yerr_s = yerr[order]
+
+        # line (use one palette color per cell)
+        line_color = palette[ci % len(palette)]
+        ax.plot(x_s, y_s, linestyle='-', marker=None, color=line_color, label=str(cell))
+
+        # scatter markers: use markerstyle_map and markercolor_map
+        marker = markerstyle_map.get(cell, "o")
+        mcolor = markercolor_map.get(cell, line_color)
+        ax.scatter(x_s, y_s, marker=marker, color=mcolor, edgecolors='k', zorder=5, s=50)
+
+        # errorbars
+        ax.errorbar(x_s, y_s, yerr=yerr_s, fmt='none', ecolor=mcolor, alpha=0.9, capsize=3)
+
+
+    # Add legends for cell types (markers)
+    cell_handles = [
+        Line2D([0],[0], marker=markerstyle_map.get(c, "o"), color="w",
+            markerfacecolor=markercolor_map.get(c, palette[i % len(palette)]),
+            markeredgecolor='k', markersize=7, label=str(c))
+        for i,c in enumerate(cells)
+    ]
+    leg1 = ax.legend(handles=cell_handles, title="Cell type", loc="upper left", bbox_to_anchor=(1.02, 1.0))
+    ax.add_artist(leg1)
+
+    # axes labels / title / grid
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Fold change (met+ / met-)")
+    ax.set_title(title)
+    ax.grid(alpha=0.25)
+
+    # tighten layout and show
+    fig.tight_layout(rect=[0,0,0.78,1])  # leave room for legends on right
+    if save_image == True:
+        try:
+            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+
+plot_by_intensity_foldchange(sorted_data_df, "OD600", -2)
