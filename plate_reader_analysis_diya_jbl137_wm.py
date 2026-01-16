@@ -14,8 +14,35 @@ import matplotlib.colors as mcolors
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 from enum import Enum
+from dataclasses import dataclass
+from typing import Dict, Any, Optional
 
-#functions and defaults
+#classes
+@dataclass
+class PlotConfig:
+    markerstyle_map: Dict[str,str]
+    markercolor_map: Dict[str,str]
+    linestyle_map: Dict[str,str]
+    line_color_map: Dict[Any,tuple]
+    line_alpha_map: Dict[Any,float]
+    plot_exclude: Dict[str, list]
+    alpha_used: bool
+    save_file_path: str
+
+# Functions
+def default_plot_config(save_file_path: str = ".") -> PlotConfig:
+    return PlotConfig(
+        markerstyle_map = {"JBL001":"s", "JBL137":"o", "media":"^"},
+        markercolor_map = {"JBL001":"black", "JBL137":"blue", "media":"black"},
+        linestyle_map = {"WM-met+": "solid", "WM-met-": "dashed", "LB": "solid"},
+        line_color_map = {},  # build from data later
+        line_alpha_map = {},
+        plot_exclude = {"cells":[], "media":[], "green_intensity":[], "red_intensity":[]},
+        alpha_used = False,
+        save_file_path = save_file_path
+    )
+DefaultConfig = default_plot_config()
+
 def mean_std_cv(data):
     #data should be array containing 1 or more arrays
     mean = np.mean(data, axis = 0)
@@ -46,6 +73,265 @@ def process_data_to_mean(data_dict):
     print(data_dict_processed)
     return data_dict_processed
 
+def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
+                            xlabel = "Time (hrs)",
+                            config: PlotConfig = DefaultConfig, save_image = False):
+    """
+    Plots y_data over time
+    
+    :param dataframe: dataframe where the data is
+    :param y_data: data to plot
+    :param plot_type: select whether 'average' are plotted or 'all' data
+    :param ylabel: optional override for the ylabel text
+    :type ylabel: str | None
+    :param title: optional override for title text
+    :type title: str | None
+    :param title_extra: optional extra to tag onto the end of the title text
+    :type title_extra: str
+    :param xlabel: optional override for the xlabel text
+    :param config: config file for styling and saving the image
+    :type config: PlotConfig
+    :param save_image: if True, then image is saved instead of displayed
+    """
+
+    if ylabel is None:
+        ylabel = y_data
+
+    if title is None:
+        title = f"{ylabel} - {plot_type} - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+
+    fig, axs = plt.subplots()
+    for row_index, row in dataframe.iterrows():
+        index_name_cells = row["cells"]
+        index_name_media = row["media"]
+        index_name_green_intensity = row["green_intensity"]
+        index_name_red_intensity = row["red_intensity"]
+
+        if (index_name_cells in config.plot_exclude["cells"]
+            or index_name_media in config.plot_exclude["media"]
+            or index_name_green_intensity in config.plot_exclude["green_intensity"]
+            or index_name_red_intensity in config.plot_exclude["red_intensity"]):
+            continue
+
+        if config.alpha_used is True:
+            alpha = config.line_alpha_map[index_name_green_intensity]
+        else:
+            alpha = 1
+
+        if plot_type == "average":
+            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+                        yerr = row[f"{y_data}_std"], capsize = 2.0,
+
+                        color = config.line_color_map[index_name_green_intensity],
+                        marker = config.markerstyle_map[index_name_cells],
+                        markerfacecolor = config.markercolor_map[index_name_cells],
+                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
+                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                        alpha = alpha,
+                        )
+            
+        elif plot_type == "all":
+            for repeat in row[f"{y_data}_raw_array"]:
+                axs.plot(row["timepoints"], repeat,
+                        
+                            color = config.line_color_map[index_name_green_intensity],
+                            marker = config.markerstyle_map[index_name_cells],
+                            markerfacecolor = config.markercolor_map[index_name_cells],
+                            markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
+                            linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                            alpha = alpha,
+                            )
+
+    leg1 = axs.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.00),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg1)
+
+    leg2 = axs.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg2)
+
+    leg3 = axs.legend(
+        handles=intensity_handles,
+        title="Green light intensity",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.35),
+        borderaxespad=0.0,
+    )
+
+    axs.add_artist(leg3)
+    axs.set_xlabel(xlabel)
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+
+    if save_image is True:
+        try:
+            Path(os.path.join(config.save_file_path, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(config.save_file_path, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+
+
+def plot_by_intensity(dataframe, y_data, plot_type, data_timearray_loc, ylabel: str | None = None, title: str | None = None,
+                              title_extra: str = "",
+                              xlabel = "Green light intensity %",
+                                config: PlotConfig = DefaultConfig, save_image = False):
+    """
+    Plots y_data over intensity at a chosen time point
+    
+    :param dataframe: dataframe where the data is
+    :param y_data: data to plot
+    :param plot_type: select whether 'average' are plotted or 'all' data
+    :param data_timearray_loc: chosen time point by index
+    :param ylabel: optional override for the ylabel text
+    :type ylabel: str | None
+    :param title: optional override for title text
+    :type title: str | None
+    :param title_extra: optional extra to tag onto the end of the title text
+    :type title_extra: str
+    :param xlabel: optional override for the xlabel text
+    :param config: config file for styling and saving the image
+    :type config: PlotConfig
+    :param save_image: if True, then image is saved instead of displayed
+    """
+    if ylabel is None:
+        ylabel = y_data
+
+    if title is None:
+        title = f"{ylabel} - by intensity - {plot_type} - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+    by_intensity_df = dataframe[["cells","media","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std", f"{y_data}_raw_array"]].copy()
+    by_intensity_df[f"{y_data}_average"] = by_intensity_df[f"{y_data}_average"].apply(lambda x: x[data_timearray_loc])
+    by_intensity_df[f"{y_data}_std"] = by_intensity_df[f"{y_data}_std"].apply(lambda x: x[data_timearray_loc])
+    by_intensity_df[f"{y_data}_raw_array"] = by_intensity_df[f"{y_data}_raw_array"].apply(lambda x: [array[data_timearray_loc] for array in x])
+    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
+
+    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+
+    fig, axs = plt.subplots()
+    for celltype in set(by_intensity_df["cells"]):
+        if celltype in config.plot_exclude["cells"]:
+            continue
+        data_select_by_cell = by_intensity_df.loc[by_intensity_df["cells"] == celltype]
+
+        for media in set(data_select_by_cell["media"]):
+            if media in config.plot_exclude["media"]:
+                continue
+            data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
+
+            if plot_type == "average":
+                i_range = range(1)
+            elif plot_type == "all":
+                i_range = range(len(data_select_by_media[f"{y_data}_raw_array"].iloc[0]))
+
+            for i in i_range:
+
+                x = data_select_by_media["green_intensity_percentage"].values.copy()
+                
+                if plot_type == "average":
+                    y = data_select_by_media[f"{y_data}_average"].values.copy()
+                elif plot_type == "all":
+                    y = np.array([row[i] for row in data_select_by_media[f"{y_data}_raw_array"]])
+
+                yerr = data_select_by_media[f"{y_data}_std"].values.copy()
+
+                # move final point (green=2.8 & red=0) to the right
+                is_final = (
+                    (data_select_by_media["green_intensity"] == 2.8) &
+                    (data_select_by_media["red_intensity"] == 0)
+                )
+
+                x[is_final.values] = x.max() + 10  # move to the right
+                
+                order = np.argsort(x)
+                x = x[order]
+                y = y[order]
+                yerr = yerr[order]
+
+                # Create line segments for gradient
+                points = np.array([x, y]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+                # Normalize x values for colormap
+                norm = plt.Normalize(x.min(), x.max())
+                lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+                lc.set_linestyle(config.linestyle_map[media])
+                lc.set_array(x)
+                axs.add_collection(lc)
+
+                # Add scatter points with gradient colors
+                scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
+                                    marker = config.markerstyle_map[celltype],
+                                    facecolor = config.markercolor_map[celltype],
+                                    edgecolor = config.markercolor_map[celltype],
+                                    )
+
+                # Add error bars
+                if plot_type == "average":
+                    axs.errorbar(x, y, yerr=yerr, fmt='none',
+                                ecolor= config.markercolor_map[celltype], alpha=1.0, capsize=2.0,
+                                )
+
+    # labels
+    leg1 = axs.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.00),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg1)
+
+    leg2 = axs.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg2)
+
+    x_axis = axs.set_xlabel(xlabel)
+    x_axis.set_color("green")
+
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+    if save_image == True:
+        try:
+            Path(os.path.join(config.save_file_path, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(config.save_file_path, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
 
 #generating plate map
 key_rows = ["A", "B", "C", "D", "E", "F", "G", "H"]
@@ -287,6 +573,8 @@ line_color_map = {green_intensity : line_color(green_intensity) for green_intens
 line_alpha = lambda green_intensity: green_intensity/2.8
 line_alpha_map = {green_intensity : line_alpha(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])}
 
+DefaultConfig.line_color_map = line_color_map
+DefaultConfig.line_alpha_map = line_alpha_map
 
 plot_exclude = {
     "cells":[],
@@ -363,309 +651,35 @@ media_handles = [
 
 
 
-def plot_average_timecourse(dataframe, y_data, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Time (hrs)",
-                            plot_exclude = plot_exclude, markerstyle_map = markerstyle_map, markercolor_map = markercolor_map,
-                            linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
-                            alpha_used = False, save_image = False, save_filepath = None):
-
-    if ylabel is None:
-        ylabel = y_data
-
-    if title is None:
-        title = f"{ylabel} - average - {title_extra}"
-    else:
-        title = title + " - " + title_extra
-
-    if alpha_used == True:
-        alpha = line_alpha_map[index_name_green_intensity]
-    else:
-        alpha = 1
-
-    if save_filepath is None:
-        save_filepath = save_file_path
-
-    fig, axs = plt.subplots()
-    for row_index, row in dataframe.iterrows():
-        index_name_cells = row["cells"]
-        index_name_media = row["media"]
-        index_name_green_intensity = row["green_intensity"]
-        index_name_red_intensity = row["red_intensity"]
-        if index_name_cells in plot_exclude["cells"] or index_name_media in plot_exclude["media"] or index_name_green_intensity in plot_exclude["green_intensity"]:
-            continue
-        else:
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
-                        yerr = row[f"{y_data}_std"], capsize = 2.0,
-                        #label = row_index,
-                        color = line_color_map[index_name_green_intensity],
-                        marker = markerstyle_map[index_name_cells],
-                        markerfacecolor = markercolor_map[index_name_cells],
-                        markeredgecolor = markercolor_map[index_name_cells], markersize = 3.0,
-                        linestyle = linestyle_map[index_name_media], linewidth = 1.0,
-                        alpha = alpha,
-                        )
-
-    leg1 = axs.legend(
-        handles=cell_handles,
-        title="Cell type",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1.00),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg1)
-
-    leg2 = axs.legend(
-        handles=media_handles,
-        title="Media",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 0.65),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg2)
-
-    leg3 = axs.legend(
-        handles=intensity_handles,
-        title="Green light intensity",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 0.35),
-        borderaxespad=0.0,
-    )
-    
-    axs.add_artist(leg3)
-
-    axs.set_xlabel("Time (hrs)")
-    axs.set_ylabel(ylabel)
-    axs.set_title(title)
-    fig.tight_layout(rect=[0, 0, 0.75, 1])
 
 
-    if save_image == True:
-        try:
-            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
-            save_title = title.replace("/","_div_")
-            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
-            plt.close(fig)
-        except:
-            print("Could not save image, filepath not valid")
-    else:
-        plt.show()
-        plt.close(fig)
 
 
-def plot_all_timecourse(dataframe, y_data, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Time (hrs)",
-                            plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
-                            linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
-                            alpha_used = False, save_image = False, save_filepath = None):
-
-    if ylabel is None:
-        ylabel = y_data
-
-    if title is None:
-        title = f"{ylabel} - all - {title_extra}"
-    else:
-        title = title + " - " + title_extra
-
-    if alpha_used == True:
-        alpha = line_alpha_map[index_name_green_intensity]
-    else:
-        alpha = 1
-
-    if save_filepath is None:
-        save_filepath = save_file_path
-
-    fig, axs = plt.subplots()
-    for row_index, row in dataframe.iterrows():
-        index_name_cells = row["cells"]
-        index_name_media = row["media"]
-        index_name_green_intensity = row["green_intensity"]
-        index_name_red_intensity = row["red_intensity"]
-        if index_name_cells in plot_exclude["cells"] or index_name_media in plot_exclude["media"] or index_name_green_intensity in plot_exclude["green_intensity"]:
-            continue
-        else:
-            for repeat in row[f"{y_data}_raw_array"]:
-                axs.plot(row["timepoints"], repeat,
-                            color = line_color_map[index_name_green_intensity],
-                            marker = markerstyle_map[index_name_cells],
-                            markerfacecolor = markercolor_map[index_name_cells],
-                            markeredgecolor = markercolor_map[index_name_cells], markersize = 3.0,
-                            linestyle = linestyle_map[index_name_media], linewidth = 1.0,
-                            alpha = alpha,
-                            )
-
-    leg1 = axs.legend(
-        handles=cell_handles,
-        title="Cell type",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1.00),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg1)
-
-    leg2 = axs.legend(
-        handles=media_handles,
-        title="Media",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 0.65),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg2)
-
-    leg3 = axs.legend(
-        handles=intensity_handles,
-        title="Green light intensity",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 0.35),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg3)
-
-    axs.set_xlabel("Time (hrs)")
-    axs.set_ylabel(ylabel)
-    axs.set_title(title)
-    fig.tight_layout(rect=[0, 0, 0.75, 1])
-
-    if save_image == True:
-        try:
-            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
-            save_title = title.replace("/","_div_")
-            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
-            plt.close(fig)
-        except:
-            print("Could not save image, filepath not valid")
-    else:
-        plt.show()
-        plt.close(fig)
 
 
+DefaultConfig.save_file_path = "26-01-07_new_jbl137_diya_wm"
 """
-plot_average_timecourse(sorted_data_df, "OD600", title_extra= "film on", save_image = True)
-plot_average_timecourse(sorted_data_df, "GFP395", title_extra= "film on", save_image = True)
-plot_average_timecourse(sorted_data_df, "GFP/OD600", title_extra= "film on", save_image = True)
-plot_average_timecourse(sorted_data_df, "GFP488", title_extra= "film on", save_image = True)
-plot_all_timecourse(sorted_data_df, "OD600", title_extra= "film on", save_image = True)
-plot_all_timecourse(sorted_data_df, "GFP395", title_extra= "film on", save_image = True)
-plot_all_timecourse(sorted_data_df, "GFP/OD600", title_extra= "film on", save_image = True)
-plot_all_timecourse(sorted_data_df, "GFP488", title_extra= "film on", save_image = True)
+plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
+plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= "film on", save_image = False)
+plot_timecourse(sorted_data_df, "GFP/OD600", "average", title_extra= "film on", save_image = False)
+plot_timecourse(sorted_data_df, "GFP488", "average", title_extra= "film on", save_image = False)
+plot_timecourse(sorted_data_df, "OD600", "all", title_extra= "film on", save_image = False)
+plot_timecourse(sorted_data_df, "GFP395", "all", title_extra= "film on", save_image = False)
+plot_timecourse(sorted_data_df, "GFP/OD600", "all", title_extra= "film on", save_image = False)
+plot_timecourse(sorted_data_df, "GFP488", "all", title_extra= "film on", save_image = False)
 """
 
-#general plot by intensity
 
-def plot_by_intensity_average(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
-                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
-                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
-                        alpha_used = False, save_image = False, save_filepath = None):
-    
-    if ylabel is None:
-        ylabel = y_data
 
-    if title is None:
-        title = f"{ylabel} - by intensity - average - {title_extra}"
-    else:
-        title = title + " - " + title_extra
+plot_by_intensity(sorted_data_df,"OD600", "average", -2, title_extra= "", save_image = True)
+plot_by_intensity(sorted_data_df,"GFP395", "average", -2, title_extra= "", save_image = True)
+plot_by_intensity(sorted_data_df,"GFP/OD600", "average", -2, title_extra= "", save_image = True)
+plot_by_intensity(sorted_data_df,"GFP488", "average", -2, title_extra= "", save_image = True)
+plot_by_intensity(sorted_data_df,"OD600", "all", -2, title_extra= "", save_image = True)
+plot_by_intensity(sorted_data_df,"GFP395", "all", -2, title_extra= "", save_image = True)
+plot_by_intensity(sorted_data_df,"GFP/OD600", "all", -2, title_extra= "", save_image = True)
+plot_by_intensity(sorted_data_df,"GFP488", "all", -2, title_extra= "", save_image = True)
 
-    if save_filepath is None:
-        save_filepath = save_file_path
-
-    by_intensity_df = dataframe[["cells","media","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std"]].copy()
-    by_intensity_df[f"{y_data}_average"] = by_intensity_df[f"{y_data}_average"].apply(lambda x: x[data_timearray_loc])
-    by_intensity_df[f"{y_data}_std"] = by_intensity_df[f"{y_data}_std"].apply(lambda x: x[data_timearray_loc])
-    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
-
-    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-    fig, axs = plt.subplots()
-    for celltype in set(by_intensity_df["cells"]):
-        data_select_by_cell = by_intensity_df.loc[by_intensity_df["cells"] == celltype]
-
-        for media in set(data_select_by_cell["media"]):
-            data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
-
-            # plot with gradient color
-            x = data_select_by_media["green_intensity_percentage"].values.copy()
-            y = data_select_by_media[f"{y_data}_average"].values.copy()
-            yerr = data_select_by_media[f"{y_data}_std"].values.copy()
-
-            # move final point (green=2.8 & red=0) to the right
-            is_final = (
-                (data_select_by_media["green_intensity"] == 2.8) &
-                (data_select_by_media["red_intensity"] == 0)
-            )
-
-            x[is_final.values] = x.max() + 10  # move to the right
-            
-            order = np.argsort(x)
-            x = x[order]
-            y = y[order]
-            yerr = yerr[order]
-
-            # Create line segments for gradient
-            points = np.array([x, y]).T.reshape(-1, 1, 2)
-            segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-            # Normalize x values for colormap
-            norm = plt.Normalize(x.min(), x.max())
-            lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-            lc.set_linestyle(linestyle_map[media])
-            lc.set_array(x)
-            axs.add_collection(lc)
-
-            # Add scatter points with gradient colors
-            scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
-                                  marker = markerstyle_map[celltype],
-                                  facecolor = markercolor_map[celltype],
-                                  edgecolor = markercolor_map[celltype],
-                                  )
-
-            # Add error bars
-            axs.errorbar(x, y, yerr=yerr, fmt='none',
-                        ecolor= markercolor_map[celltype], alpha=1.0, capsize=2.0,
-                        )
-
-    # labels
-    leg1 = axs.legend(
-        handles=cell_handles,
-        title="Cell type",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1.00),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg1)
-
-    leg2 = axs.legend(
-        handles=media_handles,
-        title="Media",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 0.65),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg2)
-
-    x_axis = axs.set_xlabel(xlabel)
-    x_axis.set_color("green")
-
-    axs.set_ylabel(ylabel)
-    axs.set_title(title)
-
-    fig.tight_layout(rect=[0, 0, 0.75, 1])
-    if save_image == True:
-        try:
-            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
-            save_title = title.replace("/","_div_")
-            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
-            plt.close(fig)
-        except:
-            print("Could not save image, filepath not valid")
-    else:
-        plt.show()
-        plt.close(fig)
-
-"""
-plot_by_intensity_average(sorted_data_df,"OD600", title_extra= "", save_image = True)
-plot_by_intensity_average(sorted_data_df,"GFP395", title_extra= "", save_image = True)
-plot_by_intensity_average(sorted_data_df,"GFP/OD600", title_extra= "", save_image = True)
-plot_by_intensity_average(sorted_data_df,"GFP488", title_extra= "", save_image = True)
-"""
 
 def plot_by_intensity_all(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
                         plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
