@@ -71,7 +71,7 @@ def plot_timecourse(chosen_data_df, columns, title = "", ylabel = "", xlabel = "
     
     plt.show()
 
-filepath = "26-02-05_chi_bio_JBL137_1/2026-01-30 15_46_01_M0_data.csv"
+filepath = "26-02-16_chi_bio_JBL137_2/2026-02-11 15_58_27_M2_data.csv"
 data_df = pd.read_csv(filepath, names = headers, index_col= False)
 print(data_df)
 
@@ -101,12 +101,12 @@ plot_timecourse(data_df, ["Internal air temperature (C)", "External air temperat
 
 
 # Figures
-LED_set = [(0,12,"red"),(12,24,"green"),(24,36,"red"),(36,48,"green"),(48,60,"red")]
-#plot_timecourse(data_df, ["Measured OD", "Turbidostat OD setpoint"], title= "Measured OD", ylabel="OD600", xlabel = "Time (hr)", LED_periods = LED_set)
-#plot_timecourse(data_df, ["Fluorescent protein 1 emission band 1"], title= "Fluorescent protein 1 emission band 1", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
-#plot_timecourse(data_df, ["Fluorescent protein 1 emission band 2"], title= "Fluorescent protein 1 emission band 2", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
-#plot_timecourse(data_df, ["Fluorescent protein 1 baseband"], title= "Fluorescent protein 1 baseband", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
-#plot_timecourse(data_df, ["Growth rate"], title= "Growth rate", ylabel="Growth rate", xlabel = "Time (hr)", LED_periods = LED_set)
+LED_set = [(0,12,"green"),(12,24,"red"),(24,36,"green"),(36,48,"red"),(48,60,"green")]
+plot_timecourse(data_df, ["Measured OD", "Turbidostat OD setpoint"], title= "Measured OD", ylabel="OD600", xlabel = "Time (hr)", LED_periods = LED_set)
+plot_timecourse(data_df, ["Fluorescent protein 1 emission band 1"], title= "Fluorescent protein 1 emission band 1", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
+plot_timecourse(data_df, ["Fluorescent protein 1 emission band 2"], title= "Fluorescent protein 1 emission band 2", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
+plot_timecourse(data_df, ["Fluorescent protein 1 baseband"], title= "Fluorescent protein 1 baseband", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
+plot_timecourse(data_df, ["Growth rate"], title= "Growth rate", ylabel="Growth rate", xlabel = "Time (hr)", LED_periods = LED_set)
 
 
 # Custom figures
