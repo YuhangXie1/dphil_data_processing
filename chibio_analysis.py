@@ -71,7 +71,7 @@ def plot_timecourse(chosen_data_df, columns, title = "", ylabel = "", xlabel = "
     
     plt.show()
 
-filepath = "26-02-16_chi_bio_JBL137_2/2026-02-11 15_58_27_M2_data.csv"
+filepath = "26-02-27_chi_bio_YX001_3/2026-02-27 13_42_02_M2_data.csv"
 data_df = pd.read_csv(filepath, names = headers, index_col= False)
 print(data_df)
 
@@ -101,7 +101,26 @@ plot_timecourse(data_df, ["Internal air temperature (C)", "External air temperat
 
 
 # Figures
-LED_set = [(0,12,"green"),(12,24,"red"),(24,36,"green"),(36,48,"red"),(48,60,"green")]
+def generate_led_set(max_hours=60):
+    LED_set = []
+    
+    for hour in range(max_hours):
+        start = hour
+        end = hour + 1
+        
+        # 1 hour green, 7 hours red repeating
+        if hour % 8 == 0:
+            color = "green"
+        else:
+            color = "red"
+        
+        LED_set.append((start, end, color))
+    
+    return LED_set
+
+
+LED_set = generate_led_set(60)
+
 plot_timecourse(data_df, ["Measured OD", "Turbidostat OD setpoint"], title= "Measured OD", ylabel="OD600", xlabel = "Time (hr)", LED_periods = LED_set)
 plot_timecourse(data_df, ["Fluorescent protein 1 emission band 1"], title= "Fluorescent protein 1 emission band 1", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
 plot_timecourse(data_df, ["Fluorescent protein 1 emission band 2"], title= "Fluorescent protein 1 emission band 2", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
