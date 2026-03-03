@@ -144,12 +144,15 @@ for start, end, color in LED_set:
 
 axs.plot(data_df["Experiment time (hr)"], data_df["Fluorescent protein 1 emission band 1"], label = "Fluorescence", color = "green")
 axs.set_ylabel("Fluorescence", color = "green")
+axs.set_ylim(0, 0.2)
 
 axs2.plot(data_df["Experiment time (hr)"], data_df["Measured OD"], label = "Measured OD", color = "blue")
 axs2.set_ylabel("Measured OD", color = "blue")
+axs2.set_ylim(0, 0.5)
 
 axs3.plot(data_df["Experiment time (hr)"], data_df["Growth rate"], label = "Growth rate", color = "red")
 axs3.set_ylabel("Growth rate", color = "red")
+axs3.set_ylim(0, 2)
 
 axs.set_title("Growth rate, OD, fluorescence")
 axs.set_xlabel("Time (hr)")
