@@ -693,8 +693,8 @@ plot_exclude_override = {
             "YX001_3_1",
             "YX001_3_2",
             "YX001_3_3",
-            "YX001_3_pre_chibio",
-            #"YX001_fresh"
+            #"YX001_3_pre_chibio",
+            "YX001_fresh"
             ],
     "media":[
             #"WM-met-"
@@ -712,9 +712,9 @@ OverrideConfig.plot_exclude = plot_exclude_override
 
 for i in ["OD600", "GFP395", "GFP488", "GFP/OD600"]:
     #_title_extra = "YX001 post chibio 2"
-    _title_extra = "YX001 fresh t12"
-    #plot_timecourse(sorted_data_df, i, "average", config = OverrideConfig, title_extra= _title_extra, save_image = True)
-    #plot_timecourse(sorted_data_df, i, "all", config = OverrideConfig, title_extra= _title_extra, save_image = True)
+    _title_extra = "YX001_3_pre-chibio t12"
+    plot_timecourse(sorted_data_df, i, "average", config = OverrideConfig, title_extra= _title_extra, save_image = True)
+    plot_timecourse(sorted_data_df, i, "all", config = OverrideConfig, title_extra= _title_extra, save_image = True)
 
     #_title_extra = "YX001 post chibio 2, t12"
     plot_by_intensity(sorted_data_df,i, "average", -2, config = OverrideConfig, title_extra= _title_extra, save_image = True)
