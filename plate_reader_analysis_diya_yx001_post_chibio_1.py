@@ -352,14 +352,14 @@ DEFAULT_OPTICAL_POWER = np.array([
 
     # Channel 1 – Green light 
     np.array([
-        [1.4,	1.4,	1.4,  	1.4,  	1.4,  	1.4,  	1.4,  	1.4,  	1.4,  	1.4,  	1.4,    1.4],  # Row A
-        [0.56,	0.56,	0.56,  	0.56,  	0.56,  	0.56,  	0.56,  	0.56,  	0.56,  	0.56,  	0.56,    0.56],  # Row B
-        [0.28,	0.28,	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,    0.28],  # Row C
-        [0.028,	0.028,	0.028,  	0.028,  	0.028,  	0.028,  	0.028,  	0.028,  	0.028,  	0.028,  	0.028,    0.028],  # Row D
-        [0.0,	0.0,	0.0,  	0.0,  	0.0,  	0.0,  	0.0,  	0.0,  	0.0,  	0.0,  	0.0,    0.0],  # Row E
-        [1.4,	0.028,	1.4,  	0.028,  	1.4,  	0.028,  	1.4,  	0.028,  	1.4,  	0.028,  	1.4,    0.028],  # Row F
-        [0.56,	0.0,	0.56,  	0.0,  	0.56,  	0.0,  	0.56,  	0.0,  	0.56,  	0.0,  	0.56,    0.0],  # Row G
-        [0.28,  1.4,    0.28,   	1.4, 	0.28,  	0.0, 	0.28,  	0.0,  	0.28,  	0.0,  	0.28,   	0.0],  # Row H
+        [1.4,	1.4,	0.0,  	0.0,  	0.0,  	0.28,  	1.4,  	0.0,  	1.4,  	0.0,  	0.0,    1.4],  # Row A
+        [0.28,	0.28,	0.28,  	0.28,  	1.4,  	1.4,  	0.0,  	0.28,  	0.28,  	1.4,  	0.28,    0.28],  # Row B
+        [0.0,	0.0,	1.4,  	1.4,  	0.28,  	0.0,  	0.28,  	1.4,  	0,  	0.28,  	1.4,    0],  # Row C
+        [1.4,	0.28,	0.28,  	1.4,  	1.4,  	0.28,  	1.4,  	0.0,  	1.4,  	0.28,  	0.0,    1.4],  # Row D
+        [0.28,	1.4,	0.0,  	0.28,  	0.0,  	0.0,  	0.0,  	0.28,  	0.0,  	1.4,  	0.28,    0.0],  # Row E
+        [0.0,	0.0,	1.4,  	0.0,  	1.4,  	1.4,  	0.0,  	1.4,  	0.28,  	0.0,  	1.4,    0.28],  # Row F
+        [1.4,	0.28,	0.0,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	1.4,  	0.0,  	0.0,    0.0],  # Row G
+        [0.0,  1.4,    0.28,   	0.0, 	0.0,  	1.4, 	1.4,  	0.0,  	0.28,  	0.0,  	0.0,   	0.0],  # Row H
     ]),
 	# Channel 2 (Color 2 or 6). Yellow-Green or White on v0.4c
 	[[0 / (2**row) for col in range(NCOLS)] for row in range(NROWS)],    
@@ -373,8 +373,8 @@ DEFAULT_OPTICAL_POWER = np.array([
         [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row D
         [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row E
         [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row F
-        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row Gh
-        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row H
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	0.0,	0.0,   0.0],  # Row G
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	0.0,	0.0,   0.0],  # Row H
     ])
 ])
 
@@ -382,12 +382,7 @@ DEFAULT_OPTICAL_POWER = np.array([
 class Cells(Enum):
     media = 0
     JBL001 = 1
-    YX001_2 = 2
-    YX001_3_1 = 3
-    YX001_3_2 = 4
-    YX001_3_3 = 5
-    YX001_3_pre_chibio = 6
-    YX001_fresh = 7
+    YX001 = 2
 
 class Rows(Enum):
     A = 0
@@ -408,26 +403,26 @@ medium = {
 
 cell_map = np.array([
         #1      2       3       4       5       6       7       8       9       10      11      12
-        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row A
-        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row B
-        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row C
-        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row D
-        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row E
-        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row F
-        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row G
-        [2,     1,      3,   	1, 	    4,  	1, 	    7,  	1,  	6,  	0,  	5,   	0],  # Row H
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row A
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row B
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row C
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row D
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row E
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row F
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	1,  	1,      1],  # Row G
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	0,  	0,      0],  # Row H
 ])
 
 media_map = np.array([
         #1      2       3       4       5       6       7       8       9       10      11      12
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row A
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row B
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row C
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row D
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row E
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row F
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row G
-        [2,     1,      2,   	2, 	    2,  	1, 	    2,  	2,  	2,  	1,  	2,   	2],  # Row H
+        [1,	    2,	    1,  	2,  	2,  	2,  	2,  	2,  	1,  	2,  	1,      2],  # Row A
+        [1,	    2,	    1,  	2,  	2,  	2,  	2,  	2,  	1,  	2,  	1,      2],  # Row B
+        [1,	    2,	    1,  	2,  	2,  	2,  	2,  	2,  	1,  	2,  	1,      2],  # Row C
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row D
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row E
+        [2,	    2,	    2,  	2,  	1,  	2,  	1,  	2,  	2,  	2,  	2,      2],  # Row F
+        [2,	    2,	    2,  	2,  	1,  	2,  	1,  	2,  	2,  	2,  	2,      1],  # Row G
+        [2,     2,      2,   	2, 	    1,  	2, 	    1,  	2,  	2,  	2,  	2,   	2],  # Row H
 ])
 
 #turn light array into labels - need to code
@@ -469,9 +464,9 @@ for key, item in plate_map.items():
 
 #filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 395nm.csv"]
 
-filepaths = ["26-03-04_YX001_post_chibio_1/26-03-04_YX001_post_chibio_1_extracted_GFP 395nm.csv",
-             "26-03-04_YX001_post_chibio_1/26-03-04_YX001_post_chibio_1_extracted_GFP 488nm.csv", 
-             "26-03-04_YX001_post_chibio_1/26-03-04_YX001_post_chibio_1_extracted_OD600.csv"]
+filepaths = ["26-03-10_YX001_diya_then_diya/26-03-10_YX001_diya_then_diya_extracted_GFP 395nm.csv",
+             "26-03-10_YX001_diya_then_diya/26-03-10_YX001_diya_then_diya_extracted_GFP 488nm.csv", 
+             "26-03-10_YX001_diya_then_diya/26-03-10_YX001_diya_then_diya_extracted_OD600.csv"]
 
 
 #initiating data df
@@ -556,23 +551,13 @@ for index, row in sorted_data_df.iterrows():
 #default color and linestyles
 #marker style and color
 markerstyle_map = {"JBL001":"s",      
-                    "YX001_2":"o",
-                    "YX001_3_1": "o",
-                    "YX001_3_2": "o",
-                    "YX001_3_3": "o",
-                    "YX001_3_pre_chibio": "o",
-                    "YX001_fresh": "o",
+                    "YX001": "o",
                     "media":"^",
 }
 
 
 markercolor_map = {"JBL001":"black",      
-                    "YX001_2":"blue",
-                    "YX001_3_1": "green",
-                    "YX001_3_2": "brown",
-                    "YX001_3_3": "orange",
-                    "YX001_3_pre_chibio": "grey",
-                    "YX001_fresh": "red",
+                    "YX001":"blue",
                     "media":"black",
 }
 
@@ -627,7 +612,7 @@ alpha_map_override = {"2.8": 1,
                  "0":0.1,
 }
 
-save_file_path = "26-01-07_new_jbl137_diya_wm"
+save_file_path = "26-03-10_YX001_diya_then_diya"
 
 #legend handles
 cell_handles = [
@@ -689,21 +674,18 @@ alpha_handles = [
 
 plot_exclude_override = {
     "cells":[
-            "YX001_2",
-            "YX001_3_1",
-            "YX001_3_2",
-            "YX001_3_3",
-            #"YX001_3_pre_chibio",
-            "YX001_fresh"
+            #"YX001",
+            "JBL001",
             ],
     "media":[
-            #"WM-met-"
+            #"WM-met-",
+            "WM-met+",
         ],
     "green_intensity":[],
     "red_intensity":[],
 }
 
-DefaultConfig.save_file_path = "26-03-04_YX001_post_chibio_1"
+DefaultConfig.save_file_path = "26-03-10_YX001_diya_then_diya"
 OverrideConfig = deepcopy(DefaultConfig)
 #OverrideConfig.alpha_used = True
 OverrideConfig.markerstyle_map = markerstyle_map
@@ -712,13 +694,13 @@ OverrideConfig.plot_exclude = plot_exclude_override
 
 for i in ["OD600", "GFP395", "GFP488", "GFP/OD600"]:
     #_title_extra = "YX001 post chibio 2"
-    _title_extra = "YX001_3_pre-chibio t12"
+    _title_extra = "met -"
     plot_timecourse(sorted_data_df, i, "average", config = OverrideConfig, title_extra= _title_extra, save_image = True)
     plot_timecourse(sorted_data_df, i, "all", config = OverrideConfig, title_extra= _title_extra, save_image = True)
 
     #_title_extra = "YX001 post chibio 2, t12"
-    plot_by_intensity(sorted_data_df,i, "average", -2, config = OverrideConfig, title_extra= _title_extra, save_image = True)
-    plot_by_intensity(sorted_data_df,i, "all", -2, config = OverrideConfig, title_extra= _title_extra, save_image = True)
+    #plot_by_intensity(sorted_data_df,i, "average", -2, config = OverrideConfig, title_extra= _title_extra, save_image = True)
+    #plot_by_intensity(sorted_data_df,i, "all", -2, config = OverrideConfig, title_extra= _title_extra, save_image = True)
     pass
 
 
