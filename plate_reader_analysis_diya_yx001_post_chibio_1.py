@@ -1,30 +1,28 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import csv
-import copy
-import json
+from copy import deepcopy
 import os
 from pathlib import Path
 from datetime import datetime
 from os import listdir, path
-import re
+from enum import Enum
+from dataclasses import dataclass
+from typing import Dict, Any, Optional
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
-from enum import Enum
-from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from collections import defaultdict
 
 #classes
 @dataclass
 class PlotConfig:
-    markerstyle_map: Dict[str,str]
-    markercolor_map: Dict[str,str]
-    linestyle_map: Dict[str,str]
-    line_color_map: Dict[Any,tuple]
-    line_alpha_map: Dict[Any,float]
+    markerstyle_map: defaultdict
+    markercolor_map: defaultdict
+    linestyle_map: defaultdict
+    line_color_map: defaultdict
+    line_alpha_map: defaultdict
     plot_exclude: Dict[str, list]
     alpha_used: bool
     save_file_path: str
@@ -32,11 +30,11 @@ class PlotConfig:
 # Functions
 def default_plot_config(save_file_path: str = ".") -> PlotConfig:
     return PlotConfig(
-        markerstyle_map = {"JBL001":"s", "JBL137":"o", "media":"^"},
-        markercolor_map = {"JBL001":"black", "JBL137":"blue", "media":"black"},
-        linestyle_map = {"WM-met+": "solid", "WM-met-": "dashed", "LB": "solid"},
-        line_color_map = {},  # build from data later
-        line_alpha_map = {},
+        markerstyle_map = defaultdict(lambda: "o", {"JBL001":"s", "JBL137":"o", "media":"^"}),
+        markercolor_map = defaultdict(lambda: "blue", {"JBL001":"black", "JBL137":"blue", "media":"black"}),
+        linestyle_map = defaultdict(lambda: "solid", {"WM-met+": "solid", "WM-met-": "dashed", "LB": "solid"}),
+        line_color_map = {lambda: "black"},  # build from data later
+        line_alpha_map = {lambda: 1.0},
         plot_exclude = {"cells":[], "media":[], "green_intensity":[], "red_intensity":[]},
         alpha_used = False,
         save_file_path = save_file_path
@@ -116,8 +114,8 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
             or index_name_red_intensity in config.plot_exclude["red_intensity"]):
             continue
 
-        if config.alpha_used is True:
-            alpha = config.line_alpha_map[index_name_green_intensity]
+        if config.alpha_used is True and index_name_red_intensity != 0:
+            alpha = config.line_alpha_map[index_name_red_intensity]
         else:
             alpha = 1
 
@@ -158,7 +156,7 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
         handles=media_handles,
         title="Media",
         loc="upper left",
-        bbox_to_anchor=(1.02, 0.65),
+        bbox_to_anchor=(1.02, 0.45),
         borderaxespad=0.0,
     )
     axs.add_artist(leg2)
@@ -167,7 +165,7 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
         handles=intensity_handles,
         title="Green light intensity",
         loc="upper left",
-        bbox_to_anchor=(1.02, 0.35),
+        bbox_to_anchor=(1.02, 0.25),
         borderaxespad=0.0,
     )
 
@@ -228,7 +226,7 @@ def plot_by_intensity(dataframe, y_data, plot_type, data_timearray_loc, ylabel: 
     by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
     by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
 
-    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    colors = [(1, 0, 0), (1, 0, 0)]  # Red (1,0,0) to Green (0,1,0)
     cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
 
     fig, axs = plt.subplots()
@@ -251,13 +249,12 @@ def plot_by_intensity(dataframe, y_data, plot_type, data_timearray_loc, ylabel: 
 
             for i in i_range:
 
-                x = data_select_by_media["red_intensity_percentage"].values.copy()
+                x = data_select_by_media["green_intensity_percentage"].values.copy()
                 
                 if plot_type == "average":
                     y = data_select_by_media[f"{y_data}_average"].values.copy()
                 elif plot_type == "all":
                     y = np.array([ (row[i] if i < len(row) else np.nan) for row in data_select_by_media[f"{y_data}_raw_array"] ])
-
 
                 yerr = data_select_by_media[f"{y_data}_std"].values.copy()
 
@@ -267,7 +264,7 @@ def plot_by_intensity(dataframe, y_data, plot_type, data_timearray_loc, ylabel: 
                     (data_select_by_media["red_intensity"] == 0)
                 )
 
-                x[is_final.values] = x.max() + 10  # move to the right
+                x[is_final.values] = x.min() - 10  # move to the left
                 
                 order = np.argsort(x)
                 x = x[order]
@@ -312,13 +309,13 @@ def plot_by_intensity(dataframe, y_data, plot_type, data_timearray_loc, ylabel: 
         handles=media_handles,
         title="Media",
         loc="upper left",
-        bbox_to_anchor=(1.02, 0.65),
+        bbox_to_anchor=(1.02, 0.45),
         borderaxespad=0.0,
     )
     axs.add_artist(leg2)
 
     x_axis = axs.set_xlabel(xlabel)
-    x_axis.set_color("green")
+    x_axis.set_color("red")
 
     axs.set_ylabel(ylabel)
     axs.set_title(title)
@@ -353,31 +350,31 @@ DEFAULT_OPTICAL_POWER = np.array([
 	# Channel 0 (Color 0 or 4). Blue on v0.4c
 	[[0 / (2**(7-row)) for col in range(NCOLS)] for row in range(NROWS)],
 
-    # Channel 1 – Green light (checkerboard starting green at B2)
+    # Channel 1 – Green light 
     np.array([
-        # Columns 1–12 (A–L), Rows A–H
-        [2.8,	0.56,   1.4,    2.8,	0.56,   1.4,    2.8,	0.56,   1.4,   	2.8,	0.56,   1.4,],  # Row A
-        [0.0,  	0.28,  	0.28,  	0.0,  	0.28,  	0.28,	0.0,  	0.28,  	0.28,	0.0,  	0.28,  	0.28,],  # Row B
-        [2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,],  # Row C
-        [0.028,	0.028,  2.8,    0.028,	0.028,  2.8,    0.028,	0.028,  2.8,   	0.028,	0.028,  2.8,],  # Row D
-        [1.4,  	2.8,  	0.0,  	1.4,  	2.8,  	0.0, 	1.4,  	2.8,  	0.0,    1.4,  	2.8,  	0.0,],  # Row E
-        [0.28,	0.0,    2.8,    0.28,	0.0,    2.8,  	0.28,	0.0,    2.8,  	0.28,	0.0,    2.8,],  # Row F
-        [0.56,	2.8,    0.028,  0.56,	2.8,    0.028, 	0.56,	2.8,    0.028,  0.56,	2.8,    0.028,],  # Row Gh
-        [2.8,	2.8,    0.0,    0.0,    0.0,    2.8,    2.8,    0.0,    0.0,    0.0,    0.0,    0.0],  # Row H
+        [1.4,	1.4,	1.4,  	1.4,  	1.4,  	1.4,  	1.4,  	1.4,  	1.4,  	1.4,  	1.4,    1.4],  # Row A
+        [0.56,	0.56,	0.56,  	0.56,  	0.56,  	0.56,  	0.56,  	0.56,  	0.56,  	0.56,  	0.56,    0.56],  # Row B
+        [0.28,	0.28,	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,  	0.28,    0.28],  # Row C
+        [0.028,	0.028,	0.028,  	0.028,  	0.028,  	0.028,  	0.028,  	0.028,  	0.028,  	0.028,  	0.028,    0.028],  # Row D
+        [0.0,	0.0,	0.0,  	0.0,  	0.0,  	0.0,  	0.0,  	0.0,  	0.0,  	0.0,  	0.0,    0.0],  # Row E
+        [1.4,	0.028,	1.4,  	0.028,  	1.4,  	0.028,  	1.4,  	0.028,  	1.4,  	0.028,  	1.4,    0.028],  # Row F
+        [0.56,	0.0,	0.56,  	0.0,  	0.56,  	0.0,  	0.56,  	0.0,  	0.56,  	0.0,  	0.56,    0.0],  # Row G
+        [0.28,  1.4,    0.28,   	1.4, 	0.28,  	0.0, 	0.28,  	0.0,  	0.28,  	0.0,  	0.28,   	0.0],  # Row H
     ]),
 	# Channel 2 (Color 2 or 6). Yellow-Green or White on v0.4c
 	[[0 / (2**row) for col in range(NCOLS)] for row in range(NROWS)],    
 
-    # Channel 3 – Red light (opposite checkerboard cells)
+    # Channel 3 – Red light
     np.array([
-        [0.0,	2.8,	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,    2.8],  # Row A
-        [2.8,   2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,   	2.8,    2.8,    2.8],  # Row B
-        [2.8,   2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,   	2.8,    2.8,    2.8],  # Row C
-        [2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,    0.0],  # Row D
-        [2.8,   2.8,    2.8,    2.8,   	2.8,    2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row E
-        [2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8, 	2.8,    2.8,    2.8,    2.8,    2.8,    2.8],  # Row F
-        [2.8,   0.0,    2.8,    2.8,    0.0,    2.8,    2.8,   	0.0,   	2.8,    2.8,    0.0,    2.8],  # Row G
-        [0.0,   0.0,    2.8,   	2.8, 	0.0,  	0.0, 	0.0,  	2.8,  	2.8,  	0.0,  	2.8,   	2.8],  # Row H
+        # Columns 1–12 (A–L), Rows A–H
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row A
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row B
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row C
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row D
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row E
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row F
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row Gh
+        [2.8,	2.8,   2.8,    2.8,	2.8,   2.8,    2.8,	2.8,   2.8,   	2.8,	2.8,   2.8],  # Row H
     ])
 ])
 
@@ -385,7 +382,12 @@ DEFAULT_OPTICAL_POWER = np.array([
 class Cells(Enum):
     media = 0
     JBL001 = 1
-    JBL137 = 2
+    YX001_2 = 2
+    YX001_3_1 = 3
+    YX001_3_2 = 4
+    YX001_3_3 = 5
+    YX001_3_pre_chibio = 6
+    YX001_fresh = 7
 
 class Rows(Enum):
     A = 0
@@ -406,14 +408,14 @@ medium = {
 
 cell_map = np.array([
         #1      2       3       4       5       6       7       8       9       10      11      12
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row A
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row B
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row C
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row D
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row E
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row F
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row G
-        [1,     1,      1,   	1, 	    1,  	1, 	    1,  	1,  	1,  	1,  	0,   	0],  # Row H
+        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row A
+        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row B
+        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row C
+        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row D
+        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row E
+        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row F
+        [2,	    2,	    3,  	3,  	4,  	4,  	7,  	7,  	6,  	6,  	5,      5],  # Row G
+        [2,     1,      3,   	1, 	    4,  	1, 	    7,  	1,  	6,  	0,  	5,   	0],  # Row H
 ])
 
 media_map = np.array([
@@ -423,9 +425,9 @@ media_map = np.array([
         [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row C
         [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row D
         [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row E
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row F
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row G
-        [1,     1,      1,   	1, 	    1,  	1, 	    2,  	2,  	2,  	2,  	2,   	2],  # Row H
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row F
+        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row G
+        [2,     1,      2,   	2, 	    2,  	1, 	    2,  	2,  	2,  	1,  	2,   	2],  # Row H
 ])
 
 #turn light array into labels - need to code
@@ -467,9 +469,9 @@ for key, item in plate_map.items():
 
 #filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 395nm.csv"]
 
-filepaths = ["26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 395nm.csv",
-             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 488nm.csv", 
-             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_OD600.csv"]
+filepaths = ["26-03-04_YX001_post_chibio_1/26-03-04_YX001_post_chibio_1_extracted_GFP 395nm.csv",
+             "26-03-04_YX001_post_chibio_1/26-03-04_YX001_post_chibio_1_extracted_GFP 488nm.csv", 
+             "26-03-04_YX001_post_chibio_1/26-03-04_YX001_post_chibio_1_extracted_OD600.csv"]
 
 
 #initiating data df
@@ -554,12 +556,23 @@ for index, row in sorted_data_df.iterrows():
 #default color and linestyles
 #marker style and color
 markerstyle_map = {"JBL001":"s",      
-                    "JBL137":"o",
+                    "YX001_2":"o",
+                    "YX001_3_1": "o",
+                    "YX001_3_2": "o",
+                    "YX001_3_3": "o",
+                    "YX001_3_pre_chibio": "o",
+                    "YX001_fresh": "o",
                     "media":"^",
 }
 
+
 markercolor_map = {"JBL001":"black",      
-                    "JBL137":"blue",
+                    "YX001_2":"blue",
+                    "YX001_3_1": "green",
+                    "YX001_3_2": "brown",
+                    "YX001_3_3": "orange",
+                    "YX001_3_pre_chibio": "grey",
+                    "YX001_fresh": "red",
                     "media":"black",
 }
 
@@ -570,18 +583,23 @@ linestyle_map = {"WM-met+": "solid",
 
 #default line_color is just percentage of green light -> (R,G,B)
 line_color = lambda green_intensity: (1.0 - green_intensity/2.8, green_intensity/2.8, 0)
-line_color_map = {green_intensity : line_color(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])}
+line_color_map = defaultdict(lambda:"black",{green_intensity : line_color(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])})
 
 #default alpha is also percentage of green light, if used
+#line_alpha = lambda green_intensity: green_intensity/2.8
+#line_alpha_map = {green_intensity : line_alpha(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])}
+
+#alpha using red intensity instead
 line_alpha = lambda green_intensity: green_intensity/2.8
 line_alpha_map = {green_intensity : line_alpha(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])}
+
 
 DefaultConfig.line_color_map = line_color_map
 DefaultConfig.line_alpha_map = line_alpha_map
 
 plot_exclude = {
     "cells":[],
-    "media":["WM-met-"],
+    "media":[],
     "green_intensity":[],
     "red_intensity":[],
 }
@@ -652,6 +670,16 @@ media_handles = [
     for media in linestyle_map
 ]
 
+alpha_handles = [
+    Line2D(
+        [], [],
+        color = line_color_map[intensity],
+        alpha = line_alpha_map[intensity],
+        linewidth=2,
+        label=intensity
+    )
+    for intensity in sorted_intensities
+]
 
 
 
@@ -659,35 +687,46 @@ media_handles = [
 
 
 
+plot_exclude_override = {
+    "cells":[
+            "YX001_2",
+            "YX001_3_1",
+            "YX001_3_2",
+            "YX001_3_3",
+            #"YX001_3_pre_chibio",
+            "YX001_fresh"
+            ],
+    "media":[
+            #"WM-met-"
+        ],
+    "green_intensity":[],
+    "red_intensity":[],
+}
 
-DefaultConfig.save_file_path = "26-01-07_new_jbl137_diya_wm"
-"""
-plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP/OD600", "average", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP488", "average", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "OD600", "all", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP395", "all", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP/OD600", "all", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP488", "all", title_extra= "film on", save_image = False)
-"""
+DefaultConfig.save_file_path = "26-03-04_YX001_post_chibio_1"
+OverrideConfig = deepcopy(DefaultConfig)
+#OverrideConfig.alpha_used = True
+OverrideConfig.markerstyle_map = markerstyle_map
+OverrideConfig.markercolor_map = markercolor_map
+OverrideConfig.plot_exclude = plot_exclude_override
+
+for i in ["OD600", "GFP395", "GFP488", "GFP/OD600"]:
+    #_title_extra = "YX001 post chibio 2"
+    _title_extra = "YX001_3_pre-chibio t12"
+    plot_timecourse(sorted_data_df, i, "average", config = OverrideConfig, title_extra= _title_extra, save_image = True)
+    plot_timecourse(sorted_data_df, i, "all", config = OverrideConfig, title_extra= _title_extra, save_image = True)
+
+    #_title_extra = "YX001 post chibio 2, t12"
+    plot_by_intensity(sorted_data_df,i, "average", -2, config = OverrideConfig, title_extra= _title_extra, save_image = True)
+    plot_by_intensity(sorted_data_df,i, "all", -2, config = OverrideConfig, title_extra= _title_extra, save_image = True)
+    pass
 
 
-"""
-plot_by_intensity(sorted_data_df,"OD600", "average", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP395", "average", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP/OD600", "average", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP488", "average", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"OD600", "all", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP395", "all", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP/OD600", "all", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP488", "all", -2, title_extra= "", save_image = True)
-"""
 
 
 def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_select,
                                    #plot_control,
-                                   ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+                                   ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Red light intensity %",
                         plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
                         linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
                         alpha_used = False, save_image = False, save_filepath = None):
@@ -708,7 +747,7 @@ def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_s
     by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
     by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
 
-    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    colors = [(1, 0, 0), (1, 0, 0)]  # Red (1,0,0) to Green (0,1,0)
     cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
 
 
@@ -724,8 +763,8 @@ def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_s
 
     for i in range(n_positions):
         ax = axs[i]
-        x = data_select["green_intensity_percentage"].values.copy()
-        y = np.array([row[i] for row in data_select[f'{y_data}_raw_array']])
+        x = data_select["red_intensity_percentage"].values.copy()
+        y = np.array([ (row[i] if i < len(row) else np.nan) for row in data_select[f"{y_data}_raw_array"] ])
 
         # move final point (green=2.8 & red=0) to the right
         is_final = (
@@ -733,7 +772,7 @@ def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_s
             (data_select["red_intensity"] == 0)
         )
 
-        x[is_final.values] = x.max() + 10  # move to the right
+        x[is_final.values] = x.min() - 10  # move to the right
         
         order = np.argsort(x)
         x = x[order]
@@ -808,20 +847,20 @@ def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_s
 
 
 plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
-#plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
-#plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
-#plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
+#plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met- t12", save_image=True, save_filepath="26-01-15_new_jbl137_diya_wm_red")
+#plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True, save_filepath="26-01-15_new_jbl137_diya_wm_red")
+#plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True, save_filepath="26-01-15_new_jbl137_diya_wm_red")
 plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
-#plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
-#plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
-#plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
+#plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True, save_filepath="26-01-15_new_jbl137_diya_wm_red")
+#plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True, save_filepath="26-01-15_new_jbl137_diya_wm_red")
+#plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True, save_filepath="26-01-15_new_jbl137_diya_wm_red")
 
 
 
 
 ####
 #GFP by intensity - average over time
-def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Red light intensity %",
                         plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
                         linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
                         alpha_used = False, save_image = False, save_filepath = None):
@@ -846,7 +885,7 @@ def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: 
 
     err_norm = mcolors.Normalize(vmin=min(times), vmax=max(times))
     err_cmap = plt.cm.tab20c
-    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+    colors = [(1, 0, 0), (1, 0, 0)]  # Red (1,0,0) to Green (0,1,0)
     cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
 
     errorbar_handles = []
@@ -876,7 +915,7 @@ def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: 
                 # selecting data based on time
 
                 # plot with gradient color
-                x = data_select_by_media["green_intensity_percentage"].values.copy()
+                x = data_select_by_media["red_intensity_percentage"].values.copy()
                 y = data_select_by_time_avg
                 yerr = data_select_by_time_std
 
@@ -886,7 +925,7 @@ def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: 
                     (data_select_by_media["red_intensity"] == 0)
                 )
 
-                x[is_final.values] = x.max() + 10  # move to the right
+                x[is_final.values] = x.min() - 10  # move to the right
                 
                 order = np.argsort(x)
                 x = x[order]
@@ -947,7 +986,7 @@ def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: 
     axs.add_artist(leg3)
 
     x_axis = axs.set_xlabel(xlabel)
-    x_axis.set_color("green")
+    x_axis.set_color("red")
 
     axs.set_ylabel(ylabel)
     axs.set_title(title)
@@ -966,15 +1005,15 @@ def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: 
         plt.close(fig)
 
 
-plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
-#plot_by_intensity_average_over_time(sorted_data_df, "OD600", plot_select_override, title_extra="WM-met-", save_image=False)
+plot_select_override = {"cells":["JBL137"],"media":["WM-met-","WM-met+"]}
+#plot_by_intensity_average_over_time(sorted_data_df, "OD600", plot_select_override, title_extra="all media", save_image=True, save_filepath="26-01-15_new_jbl137_diya_wm_red")
 
 
 
 
 
 
-def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
+def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Red light intensity %",
                         plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
                         linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
                         alpha_used = False, save_image = False, save_filepath = None):
@@ -1025,7 +1064,7 @@ def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: 
         (paired["std_met_plus"]  / paired["avg_met_plus"])**2
     )
 
-    paired["green_intensity_percentage"] = paired["green_intensity"].apply(lambda x: 100*x/2.8)
+    paired["red_intensity_percentage"] = paired["red_intensity"].apply(lambda x: 100*x/2.8)
 
     cells = paired["cells"].unique()
     palette = plt.rcParams["axes.prop_cycle"].by_key()["color"]
@@ -1038,12 +1077,12 @@ def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: 
             continue
 
         # base x
-        x = dfc["green_intensity_percentage"].to_numpy(dtype=float)
+        x = dfc["red_intensity_percentage"].to_numpy(dtype=float)
 
         # shift where red intensity == 0 by +10
-        final_mask = dfc["red_intensity"].to_numpy(dtype=float) == 0
+        final_mask = dfc["green_intensity"].to_numpy(dtype=float) == 0
         x_shift = x.copy()
-        x_shift[final_mask] = x_shift[final_mask] + 10.0
+        x_shift[final_mask] = x_shift[final_mask] - 10.0
 
         # y and yerr
         y = dfc["fold_change"].to_numpy(dtype=float)
@@ -1099,4 +1138,4 @@ def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: 
         plt.close(fig)
 
 
-plot_by_intensity_foldchange(sorted_data_df, "OD600", -2)
+plot_by_intensity_foldchange(sorted_data_df, "OD600", -2, save_image=True, save_filepath="26-01-15_new_jbl137_diya_wm_red")

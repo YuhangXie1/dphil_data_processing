@@ -80,16 +80,16 @@ all_plate_table_df = {}
 ### MAIN ###
 
 plate_reader = {"downstairs":0, "upstairs":1}
-chosen_plate_reader = 1
+chosen_plate_reader = 0
 
-data_folder = "26-04-20_diya_24well"
-data_files = ["Yuhang_diya_24well_t0.xlsx",
-             "Yuhang_diya_24well_t4.xlsx",
-             "Yuhang_diya_24well_t12.xlsx",
-             "Yuhang_diya_24well_t24.xlsx",
+data_folder = "26-03-04_YX001_post_chibio_1"
+data_files = ["26-03-04_YX001_post_chibio_t0.xlsx",
+             "26-03-04_YX001_post_chibio_t4.xlsx",
+             "26-03-04_YX001_post_chibio_t12.xlsx",
+             "26-03-04_YX001_post_chibio_t24.xlsx",
              ]
 
-save_filename_starter = "26-04-20_diya_24well"
+save_filename_starter = "26-03-04_YX001_post_chibio_1"
 
 #extracting data
 for filepath in data_files:
