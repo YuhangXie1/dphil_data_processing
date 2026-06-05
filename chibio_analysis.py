@@ -71,7 +71,7 @@ def plot_timecourse(chosen_data_df, columns, title = "", ylabel = "", xlabel = "
     
     plt.show()
 
-filepath = "26-02-27_chi_bio_YX001_3/2026-02-27 13_42_02_M2_data.csv"
+filepath = "26-02-05_chi_bio_JBL137_1/2026-01-30 15_46_01_M0_data.csv"
 data_df = pd.read_csv(filepath, names = headers, index_col= False)
 print(data_df)
 
@@ -120,6 +120,7 @@ def generate_led_set(max_hours=60):
 
 
 LED_set = generate_led_set(60)
+LED_set = [(0,12,"red"),(12,24,"green"),(24,36,"red"),(36,48,"green"),(48,60,"red")]
 
 plot_timecourse(data_df, ["Measured OD", "Turbidostat OD setpoint"], title= "Measured OD", ylabel="OD600", xlabel = "Time (hr)", LED_periods = LED_set)
 plot_timecourse(data_df, ["Fluorescent protein 1 emission band 1"], title= "Fluorescent protein 1 emission band 1", ylabel="GFP395", xlabel = "Time (hr)", LED_periods = LED_set)
@@ -133,36 +134,38 @@ plot_timecourse(data_df, ["Growth rate"], title= "Growth rate", ylabel="Growth r
 # Growth rate overlaid with growth curves and fluorescence
 fig, axs = plt.subplots(figsize=(10, 5))
 axs2 = axs.twinx()
-axs3 = axs.twinx()
+#axs3 = axs.twinx()
 axs.spines["left"].set_color("green")
 axs2.spines["right"].set_color("blue")
-axs3.spines["right"].set_position(("outward", 60))
-axs3.spines["right"].set_color("red")
+#axs3.spines["right"].set_position(("outward", 60))
+#axs3.spines["right"].set_color("red")
 
 for start, end, color in LED_set:
     axs.axvspan(start, end, color = color, alpha = 0.15, zorder = 0)
 
 axs.plot(data_df["Experiment time (hr)"], data_df["Fluorescent protein 1 emission band 1"], label = "Fluorescence", color = "green")
 axs.set_ylabel("Fluorescence", color = "green")
-axs.set_ylim(0, 0.2)
+#axs.set_ylim(0, 0.2)
 
 axs2.plot(data_df["Experiment time (hr)"], data_df["Measured OD"], label = "Measured OD", color = "blue")
 axs2.set_ylabel("Measured OD", color = "blue")
-axs2.set_ylim(0, 0.5)
+#axs2.set_ylim(0, 0.5)
 
-axs3.plot(data_df["Experiment time (hr)"], data_df["Growth rate"], label = "Growth rate", color = "red")
-axs3.set_ylabel("Growth rate", color = "red")
-axs3.set_ylim(0, 2)
+#axs3.plot(data_df["Experiment time (hr)"], data_df["Growth rate"], label = "Growth rate", color = "red")
+#axs3.set_ylabel("Growth rate", color = "red")
+#axs3.set_ylim(0, 2)
 
 axs.set_title("Growth rate, OD, fluorescence")
 axs.set_xlabel("Time (hr)")
 
 lines1, labels1 = axs.get_legend_handles_labels()
 lines2, labels2 = axs2.get_legend_handles_labels()
-lines3, labels3 = axs3.get_legend_handles_labels()
+#lines3, labels3 = axs3.get_legend_handles_labels()
 axs.legend(
-    lines1 + lines2 + lines3,
-    labels1 + labels2 + labels3,
+    lines1 + lines2,
+    #+ lines3,
+    labels1 + labels2,
+    #+ labels3,
     bbox_to_anchor=(1.02, 1.20)
 )
 
