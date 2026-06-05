@@ -2,16 +2,11 @@
 """
 excel_to_diya.py
 
-Reads an optical plate-map Excel file and generates a ready-to-run
+Reads an optogenetics Excel experiment setup file and generates a ready-to-run
 Diya Python script with the Red and Green optical power matrices filled in.
 
 Usage:
-    Just run the script:
-        python excel_to_diya.py
-
-    Then either:
-      - press Enter to use ./input.xlsx
-      - paste a full path to an .xlsx file
+    import excel_to_diya function and run in a python script
 
 The script searches the chosen sheet for:
   • A cell containing "Red"   followed by an 8-row × 12-col numeric block
@@ -20,14 +15,11 @@ The script searches the chosen sheet for:
 Both blocks are expected to have row labels A-H in column 0 and column
 labels 1-12 in the header row immediately after the colour label.
 """
-
-import argparse
-import sys
 import textwrap
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
+import os
 
 
 # ---------------------------------------------------------------------------
@@ -181,7 +173,7 @@ parser.add_argument('--disable-current-scaling', action='store_true')
 parser.add_argument('--verbose',              action='store_true')
 args = parser.parse_args()
 
-device_id      = args.device_id
+device_id     = args.device_id
 selected_group = args.led_group
 
 power_matrix = DEFAULT_OPTICAL_POWER.copy()
@@ -253,52 +245,26 @@ except (ValueError, Exception) as e:
         import traceback
         traceback.print_exc()
     sys.exit(1)
-""")
+        """)
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
-def get_input_path() -> Path:
-    """
-    Default to ./input.xlsx next to this script.
-    If that file does not exist, prompt the user to paste a path.
-    """
-    
+def excel_to_diya(save_name, path_to_input_excel = "input.xlsx", input_sheet = "Plate data", save_path = ""):
+    print("Running excel_to_diya.py")
+    print(f"Input path: {path_to_input_excel}")
 
+    Path(save_path).mkdir(parents = True, exist_ok = True)
+    final_save_path = Path(save_path) / save_name
+    if final_save_path.suffix != ".py":
+        final_save_path = final_save_path.with_suffix(".py")
 
+    print(f"Save path: {final_save_path}")
+    print(f"Looking in sheet '{input_sheet}'")
 
-
-def main(input_path = None):
-    parser = argparse.ArgumentParser(
-        description="Convert a DIYA optical plate-map Excel file to a Python script."
-    )
-    parser.add_argument("--sheet", default="Plate map",
-                        help="Sheet name containing the Red/Green blocks (default: 'Plate map')")
-    parser.add_argument("--on-time", type=float, default=5.0)
-    parser.add_argument("--period", type=float, default=5.0)
-    parser.add_argument("--temperature", type=float, default=37.0)
-    parser.add_argument("--experiment-id", default=None,
-                        help="Experiment label used in script comments (inferred from filename if omitted)")
-    args = parser.parse_args()
-
-    if input_path is None:
-        try:
-            script_dir = Path(__file__).resolve().parent
-            default_path = script_dir / "input.xlsx"
-
-            if default_path.exists():
-                input_path = default_path
-        except FileNotFoundError as e:
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-
-    experiment_id = args.experiment_id or input_path.stem
-    output_path = input_path.with_name(input_path.stem + "_diya.py")
-
-    print(f"Reading '{args.sheet}' from {input_path} …")
-    df = pd.read_excel(input_path, sheet_name=args.sheet, header=None)
+    df = pd.read_excel(path_to_input_excel, sheet_name=input_sheet, header=None)
 
     print("Extracting Red matrix …")
     red = find_block(df, "Red")
@@ -311,20 +277,19 @@ def main(input_path = None):
     script = generate_script(
         red=red,
         green=green,
-        on_time=args.on_time,
-        period=args.period,
-        temperature=args.temperature,
-        experiment_id=experiment_id,
-        source_file=input_path.name,
+        on_time = 5,
+        period = 5,
+        temperature = 37.0,
+        experiment_id = path_to_input_excel,
+        source_file = path_to_input_excel,
     )
 
-    output_path.write_text(script, encoding="utf-8")
-    print(f"Script written to: {output_path}")
+    final_save_path.write_text(script, encoding="utf-8")
+    print("excel_to_diya.py run complete")
 
 # ---------------------------------
 ### Running the code ###
 # ---------------------------------
 input_path = None
 
-if __name__ == "__main__":
-    main(input_path)
+excel_to_diya("test")
