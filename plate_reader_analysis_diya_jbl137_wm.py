@@ -637,96 +637,107 @@ for row in range(0,len(red_array)):
 for key, item in plate_map.items():
     plate_map[key].append("_".join(map(str, item)))
 
+def load_data(filepaths):
+    
+    #initialises columns of dataframe
+    indexes = sorted(set([value[-1] for value in plate_map.values()]))
+    columns = ["cells", #str
+               "media", #str
+               "green_intensity", #float
+               "red_intensity", #float
+               #data
+               ]
+
+    for path in filepaths:
+        name = path.split("_")[-1].replace(".csv","")
+        columns.append(name + "_timepoints")
+        columns.append(name + "_raw")
+        columns.append(name + "_average")
+        columns.append(name + "_std")
+        if name != "OD600":
+            columns.append(name + "/OD600_raw")
+            columns.append(name + "/OD600_average")
+            columns.append(name + "/OD600_std")   
+
+    sorted_data_df = pd.DataFrame(0.0, index=indexes, columns=columns).astype(object)
+
+    #initialising arrays for raw data
+    for column in sorted_data_df.columns:
+        if column.split("_")[-1] == "raw":
+            sorted_data_df[column] = [[] for _ in range(len(sorted_data_df))]
+
+    #Populating the DF
+    #reading extracted data file csv
+    file_list = {}
+    channel_list = []
+    for filepath in filepaths:
+        filename = filepath.split("_")[-1].replace(".csv","")
+        channel_list.append(filename)
+        data = pd.read_csv(filepath, header = 0, index_col= 0)
+        
+        #working out the time points
+        timepoints = list(data.columns.values)
+        try:
+            initial_time = datetime.strptime(timepoints[0], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            initial_time = datetime.strptime(timepoints[0], "%d/%m/%Y %H:%M:%S")
+
+        timepoints_hrs = []
+        for item in timepoints:
+            try:
+                timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                timepoints_datetime = datetime.strptime(item, "%d/%m/%Y %H:%M:%S")
+            time_delta = timepoints_datetime - initial_time
+            timepoints_hrs.append(time_delta.total_seconds() / 3600)
+
+        #renaming file column to the time
+        data = data.rename(columns={old:new for (old,new) in zip(timepoints, timepoints_hrs)})
+        
+        file_list[filename] = data
+
+
+    #populate raw data from wells
+    for well_coord, value in plate_map.items():
+        sorted_data_df.loc[value[-1],"cells"] = value[0]
+        sorted_data_df.loc[value[-1],"media"] = value[1]
+        sorted_data_df.loc[value[-1],"green_intensity"] = value[2]
+        sorted_data_df.loc[value[-1],"red_intensity"] = value[3]
+        
+
+        for channel in channel_list:
+            sorted_data_df.loc[value[-1], channel + "_raw"].append(np.array(file_list[channel].loc[str(well_coord)]))
+            sorted_data_df.at[value[-1], channel + "_timepoints"] = file_list[channel].columns.values
+            if channel != "OD600":
+                sorted_data_df.loc[value[-1], channel + "/OD600_raw"].append(np.array(file_list[channel].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
+
+    #calculating means and std
+    for index, row in sorted_data_df.iterrows():
+        for channel in channel_list:
+            #mean, std data
+            sorted_data_df.at[index, channel + "_average"] = np.mean(sorted_data_df.loc[index, channel + "_raw"], axis = 0)
+            sorted_data_df.at[index, channel + "_std"] = np.std(sorted_data_df.loc[index, channel + "_raw"], axis = 0)
+            if channel != "OD600":
+                sorted_data_df.at[index, channel + "/OD600_average"] = np.mean(sorted_data_df.loc[index,channel + "/OD600_raw"], axis = 0)
+                sorted_data_df.at[index, channel + "/OD600_std"] = np.std(sorted_data_df.loc[index, channel + "/OD600_raw"], axis = 0)
+
+    return sorted_data_df
 
 
 
 
 
-#filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 395nm.csv"]
 
 filepaths = ["26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 395nm.csv",
              "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 488nm.csv", 
              "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_OD600.csv"]
 
-
-#initiating data df
-indexes = sorted(set([value[-1] for value in plate_map.values()]))
-
-sorted_data_df = pd.DataFrame(0.0, index=indexes, columns=["cells",
-                                                           "media",
-                                                           "green_intensity",
-                                                           "red_intensity",
-                                                           "timepoints",
-                                                           "OD600_raw_array","OD600_average","OD600_std",
-                                                           "GFP488_raw_array","GFP488_average","GFP488_std",
-                                                           "GFP395_raw_array","GFP395_average","GFP395_std",
-                                                           "GFP/OD600_raw_array","GFP/OD600_average","GFP/OD600_std"]
-                                                            ).astype(object)
-#initialising arrays
-sorted_data_df["OD600_raw_array"] = [[] for _ in range(len(sorted_data_df))]
-sorted_data_df["GFP488_raw_array"] = [[] for _ in range(len(sorted_data_df))]
-sorted_data_df["GFP395_raw_array"] = [[] for _ in range(len(sorted_data_df))]
-sorted_data_df["GFP/OD600_raw_array"] = [[] for _ in range(len(sorted_data_df))]
-
-#reading extracted data file csv
-file_list = {}
-for filepath in filepaths:
-    filename = filepath.split("_")[-1].replace(".csv","")
-    data = pd.read_csv(filepath, header = 0, index_col= 0)
-    
-    #working out the time points
-    timepoints = list(data.columns.values)
-    try:
-        initial_time = datetime.strptime(timepoints[0], "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        initial_time = datetime.strptime(timepoints[0], "%d/%m/%Y %H:%M:%S")
-
-    timepoints_hrs = []
-    for item in timepoints:
-        try:
-            timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            timepoints_datetime = datetime.strptime(item, "%d/%m/%Y %H:%M:%S")
-        time_delta = timepoints_datetime - initial_time
-        timepoints_hrs.append(time_delta.total_seconds() / 3600)
-
-    #renaming file column to the time
-    data = data.rename(columns={old:new for (old,new) in zip(timepoints, timepoints_hrs)})
-    
-    file_list[filename] = data
+sorted_data_df = load_data(filepaths)
 
 
-#populate raw data from wells
-for well_coord, value in plate_map.items():
-    sorted_data_df.loc[value[-1],"cells"] = value[0]
-    sorted_data_df.loc[value[-1],"media"] = value[1]
-    sorted_data_df.loc[value[-1],"green_intensity"] = value[2]
-    sorted_data_df.loc[value[-1],"red_intensity"] = value[3]
-    sorted_data_df.loc[value[-1],"OD600_raw_array"].append(np.array(file_list["OD600"].loc[str(well_coord)]))
-    sorted_data_df.loc[value[-1],"GFP488_raw_array"].append(np.array(file_list["GFP 488nm"].loc[str(well_coord)]))
-    sorted_data_df.loc[value[-1],"GFP395_raw_array"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)]))
-    sorted_data_df.loc[value[-1],"GFP/OD600_raw_array"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
 
 
-#calculating time points
-sorted_data_df["timepoints"] = [list(file_list["OD600"].columns.values) for _ in range(len(sorted_data_df))]
 
-#calculating means and std
-for index, row in sorted_data_df.iterrows():
-
-    #mean, std data
-    sorted_data_df.at[index,"OD600_average"] = np.mean(sorted_data_df.loc[index,"OD600_raw_array"], axis = 0)
-    sorted_data_df.at[index,"OD600_std"] = np.std(sorted_data_df.loc[index,"OD600_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP488_average"] = np.mean(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP488_std"] = np.std(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP395_average"] = np.mean(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP395_std"] = np.std(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
-
-    sorted_data_df.at[index,"GFP/OD600_average"] = np.mean(sorted_data_df.loc[index,"GFP/OD600_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP/OD600_std"] = np.std(sorted_data_df.loc[index,"GFP/OD600_raw_array"], axis = 0)
-
-
-#plotting
 
 #default color and linestyles
 #marker style and color
