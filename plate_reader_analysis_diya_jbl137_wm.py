@@ -29,11 +29,17 @@ class PlotConfig:
     alpha_used: bool
     save_file_path: str
 
+    default_markerstyle: str = "o"
+    default_markercolor: str = "blue"
+    default_linestyle: str = "solid"
+    default_linecolor: str = "black"
+    default_linealpha: float = 1.0
+
 # Functions
 def default_plot_config(save_file_path: str = ".") -> PlotConfig:
     return PlotConfig(
-        markerstyle_map = {"JBL001":"s", "JBL137":"o", "media":"^"},
-        markercolor_map = {"JBL001":"black", "JBL137":"blue", "media":"black"},
+        markerstyle_map = {"JBL001":"s", "JBL137":"o", "YX001":"o", "media":"^"},
+        markercolor_map = {"JBL001":"black", "JBL137":"blue", "YX001": "blue", "media":"black"},
         linestyle_map = {"WM-met+": "solid", "WM-met-": "dashed", "LB": "solid"},
         line_color_map = {},  # build from data later
         line_alpha_map = {},
@@ -72,6 +78,27 @@ def process_data_to_mean(data_dict):
         data_dict_processed[key] = mean_std_cv_array
     print(data_dict_processed)
     return data_dict_processed
+
+def build_intensity_colour_map(green_intensities, cmap_name = None) -> Dict[Any,tuple]:
+    green_intensities_set = set(green_intensities)
+    min_intensity = min(green_intensities_set)
+    max_intensity = max(green_intensities_set)
+
+    if cmap_name is None:
+        cmap = LinearSegmentedColormap.from_list("red_to_green",[(1,0,0), (0,1,0)])
+    else:
+        cmap = plt.get_cmap(cmap_name)
+
+    if max_intensity == min_intensity:
+        print("only one green intensity")
+        return {}
+    
+    norm = mcolors.Normalize(vmin=min_intensity,vmax=max_intensity)
+
+    return {
+            intensity: cmap(norm(intensity))
+            for intensity in green_intensities_set
+        }
 
 def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
                             xlabel = "Time (hrs)",
@@ -123,7 +150,7 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
             alpha = 1
 
         if plot_type == "average":
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         color = config.line_color_map[index_name_green_intensity],
@@ -135,8 +162,8 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
                         )
             
         elif plot_type == "all":
-            for repeat in row[f"{y_data}_raw_array"]:
-                axs.plot(row["timepoints"], repeat,
+            for repeat in row[f"{y_data}_raw"]:
+                axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             color = config.line_color_map[index_name_green_intensity],
                             marker = config.markerstyle_map[index_name_cells],
@@ -147,7 +174,7 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
                             )
         
         elif plot_type == "both":
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         #color = config.line_color_map[index_name_green_intensity],
@@ -158,8 +185,8 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
                         alpha = 1.0,
                         )
             
-            for repeat in row[f"{y_data}_raw_array"]:
-                axs.plot(row["timepoints"], repeat,
+            for repeat in row[f"{y_data}_raw"]:
+                axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             #color = config.line_color_map[index_name_green_intensity],
                             linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
@@ -416,7 +443,7 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
             alpha = 1
 
         if plot_type == "average":
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         color = config.line_color_map[index_name_green_intensity],
@@ -429,7 +456,7 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
             
         elif plot_type == "all":
             for repeat in row[f"{y_data}_raw_array"]:
-                axs.plot(row["timepoints"], repeat,
+                axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             color = config.line_color_map[index_name_green_intensity],
                             marker = config.markerstyle_map[index_name_cells],
@@ -446,7 +473,7 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
             else:
                 custom_line_color = {0.28: "black", 0.0: "black", 2.8: "black"}
 
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         color = custom_line_color[index_name_green_intensity],
@@ -461,7 +488,7 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
             for repeat in row[f"{y_data}_raw_array"]:
                 if row["cells"] == "JBL001" or row["cells"] == "media":
                     continue
-                axs.plot(row["timepoints"], repeat,
+                axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             color = custom_line_color[index_name_green_intensity],
                             linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
@@ -655,6 +682,7 @@ def load_data(filepaths):
         columns.append(name + "_average")
         columns.append(name + "_std")
         if name != "OD600":
+            columns.append(name + "/OD600_timepoints")
             columns.append(name + "/OD600_raw")
             columns.append(name + "/OD600_average")
             columns.append(name + "/OD600_std")   
@@ -710,6 +738,7 @@ def load_data(filepaths):
             sorted_data_df.at[value[-1], channel + "_timepoints"] = file_list[channel].columns.values
             if channel != "OD600":
                 sorted_data_df.loc[value[-1], channel + "/OD600_raw"].append(np.array(file_list[channel].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
+                sorted_data_df.at[value[-1], channel + "/OD600_timepoints"] = file_list[channel].columns.values
 
     #calculating means and std
     for index, row in sorted_data_df.iterrows():
@@ -720,6 +749,9 @@ def load_data(filepaths):
             if channel != "OD600":
                 sorted_data_df.at[index, channel + "/OD600_average"] = np.mean(sorted_data_df.loc[index,channel + "/OD600_raw"], axis = 0)
                 sorted_data_df.at[index, channel + "/OD600_std"] = np.std(sorted_data_df.loc[index, channel + "/OD600_raw"], axis = 0)
+
+    # Generating color map
+    DefaultConfig.line_color_map = build_intensity_colour_map(sorted_data_df["green_intensity"].unique())
 
     return sorted_data_df
 
@@ -736,7 +768,16 @@ sorted_data_df = load_data(filepaths)
 
 
 
+# Color and style map
+style_map = {
+    "marker_style":{
+        "o":[]
+    },
+    "marker_color":{},
+    "line_style":{},
+    "line_color":{},
 
+}
 
 
 #default color and linestyles
@@ -756,17 +797,6 @@ linestyle_map = {"WM-met+": "solid",
                  "WM-met-": "dashed",
 }
 
-#default line_color is just percentage of green light -> (R,G,B)
-line_color = lambda green_intensity: (1.0 - green_intensity/2.8, green_intensity/2.8, 0)
-line_color_map = {green_intensity : line_color(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])}
-
-#default alpha is also percentage of green light, if used
-line_alpha = lambda green_intensity: green_intensity/2.8
-line_alpha_map = {green_intensity : line_alpha(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])}
-
-DefaultConfig.line_color_map = line_color_map
-DefaultConfig.line_alpha_map = line_alpha_map
-
 plot_exclude = {
     "cells":[],
     "media":[],
@@ -775,7 +805,7 @@ plot_exclude = {
 }
 
 #od600 - average
-line_color_map_override = {"2.8": (0.0,1.0,0.0),
+line_color_map = {"2.8": (0.0,1.0,0.0),
              "1.4": (0.5,0.5,0.0),
              "0.56":(0.6,0.4,0.0),
              "0.28":(0.8,0.2,0.0),
@@ -784,7 +814,7 @@ line_color_map_override = {"2.8": (0.0,1.0,0.0),
 }
 
 
-alpha_map_override = {"2.8": 1,
+alpha_map = {"2.8": 1,
                  "2.52": 0.95,
                  "2.24": 0.9,
                  "1.96": 0.8,
@@ -849,6 +879,9 @@ media_handles = [
 
 
 DefaultConfig.save_file_path = "26-01-07_new_jbl137_diya_wm"
+
+plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
+plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "all", title_extra= "film on", save_image = False)
 """
 plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
 plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= "film on", save_image = False)
@@ -869,11 +902,11 @@ plot_exclude = {
 DefaultConfig.plot_exclude = plot_exclude
 
 
-plot_timecourse_custom(sorted_data_df, "OD600", "both", title_extra= "", save_image = False,
+""" plot_timecourse_custom(sorted_data_df, "OD600", "both", title_extra= "", save_image = False,
                        row_filter=lambda row: ((row["cells"] == "JBL001" and row["green_intensity"] in [0.0])
                                                or (row["cells"] == "media")
                                                or (row["cells"] == "JBL137" and row["green_intensity"] in [0.28, 0.0])))
-
+ """
 
 """
 plot_by_intensity(sorted_data_df,"OD600", "average", -2, title_extra= "", save_image = True)
