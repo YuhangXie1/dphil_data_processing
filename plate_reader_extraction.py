@@ -82,14 +82,14 @@ all_plate_table_df = {}
 plate_reader = {"downstairs":0, "upstairs":1}
 chosen_plate_reader = 0
 
-data_folder = "26-06-05_kirill_single_plasmid_2"
-data_files = ["26-06-05_kirills_single_plasmid_t0.xlsx",
-             "26-06-05_kirills_single_plasmid_t3.xlsx",
-             "26-06-05_kirills_single_plasmid_t6.xlsx",
-             "26-06-05_kirills_single_plasmid_t8.xlsx",
+data_folder = "26-07-22_optowell_test1"
+data_files = ["t0.xlsx",
+             "t5.xlsx",
+             "t12.xlsx",
+             "t24.xlsx",
              ]
 
-save_filename_starter = "26-06-05_kirill_single_plasmid_2"
+save_filename_starter = "26-07-22_optowell_test1"
 
 #extracting data
 for filepath in data_files:
