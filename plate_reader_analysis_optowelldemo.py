@@ -153,11 +153,11 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
             axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
-                        color = config.line_color_map[index_name_green_intensity],
-                        marker = config.markerstyle_map[index_name_cells],
-                        markerfacecolor = config.markercolor_map[index_name_cells],
-                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                        color = config.line_color_map.get(index_name_cells, config.default_linecolor),
+                        marker = config.markerstyle_map.get(index_name_cells, config.default_markerstyle),
+                        markerfacecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor),
+                        markeredgecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor), markersize = 3.0,
+                        linestyle = config.linestyle_map.get(index_name_media, config.default_linestyle), linewidth = 1.0,
                         alpha = alpha,
                         )
             
@@ -165,11 +165,11 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
             for repeat in row[f"{y_data}_raw"]:
                 axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
-                            color = config.line_color_map[index_name_green_intensity],
-                            marker = config.markerstyle_map[index_name_cells],
-                            markerfacecolor = config.markercolor_map[index_name_cells],
-                            markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                            linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                            color = config.line_color_map.get(index_name_cells, config.default_linecolor),
+                            marker = config.markerstyle_map.get(index_name_cells, config.default_markerstyle),
+                            markerfacecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor),
+                            markeredgecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor), markersize = 3.0,
+                            linestyle = config.linestyle_map.get(index_name_media, config.default_linestyle), linewidth = 1.0,
                             alpha = alpha,
                             )
         
@@ -178,10 +178,10 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         #color = config.line_color_map[index_name_green_intensity],
-                        marker = config.markerstyle_map[index_name_cells],
-                        markerfacecolor = config.markercolor_map[index_name_cells],
-                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                        marker = config.markerstyle_map.get(index_name_cells, config.default_markerstyle),
+                        markerfacecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor),
+                        markeredgecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor), markersize = 3.0,
+                        linestyle = config.linestyle_map.get(index_name_media, config.default_linestyle), linewidth = 1.0,
                         alpha = 1.0,
                         )
             
@@ -189,7 +189,7 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
                 axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             #color = config.line_color_map[index_name_green_intensity],
-                            linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                            linestyle = config.linestyle_map.get(index_name_media, config.default_linestyle), linewidth = 1.0,
                             alpha = 0.2,
                             )
                             
@@ -446,11 +446,11 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
             axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
-                        color = config.line_color_map[index_name_green_intensity],
-                        marker = config.markerstyle_map[index_name_cells],
-                        markerfacecolor = config.markercolor_map[index_name_cells],
-                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                        color = config.line_color_map.get(index_name_green_intensity, config.default_linecolor),
+                        marker = config.markerstyle_map.get(index_name_cells, config.default_markerstyle),
+                        markerfacecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor),
+                        markeredgecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor), markersize = 3.0,
+                        linestyle = config.linestyle_map.get(index_name_media, config.default_linestyle), linewidth = 1.0,
                         alpha = alpha,
                         )
             
@@ -458,11 +458,11 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
             for repeat in row[f"{y_data}_raw_array"]:
                 axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
-                            color = config.line_color_map[index_name_green_intensity],
-                            marker = config.markerstyle_map[index_name_cells],
-                            markerfacecolor = config.markercolor_map[index_name_cells],
-                            markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                            linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                            color = config.line_color_map.get(index_name_green_intensity, config.default_linecolor),
+                            marker = config.markerstyle_map.get(index_name_cells, config.default_markerstyle),
+                            markerfacecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor),
+                            markeredgecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor), markersize = 3.0,
+                            linestyle = config.linestyle_map.get(index_name_media, config.default_linestyle), linewidth = 1.0,
                             alpha = alpha,
                             )
         
@@ -477,10 +477,10 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         color = custom_line_color[index_name_green_intensity],
-                        marker = config.markerstyle_map[index_name_cells],
+                        marker = config.markerstyle_map.get(index_name_cells, config.default_markerstyle),
                         markerfacecolor = custom_line_color[index_name_green_intensity],
                         markeredgecolor = custom_line_color[index_name_green_intensity], markersize = 3.0,
-                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                        linestyle = config.linestyle_map.get(index_name_media, config.default_linestyle), linewidth = 1.0,
                         alpha = 1.0,
                         )
             
@@ -491,7 +491,7 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
                 axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             color = custom_line_color[index_name_green_intensity],
-                            linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                            linestyle = config.linestyle_map.get(index_name_media, config.default_linestyle), linewidth = 1.0,
                             alpha = 0.2,
                             )
                             
@@ -611,14 +611,14 @@ medium = {
 #actually using wavelength
 cell_map = np.array([
         #1      2       3       4       5       6       7       8       9       10      11      12
-        [365,	    365,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row A
-        [0,	    0,	    0,  	0,  	0,  	0,  	2,  	2,  	2,  	2,  	2,      2],  # Row B
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row C
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row D
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row E
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row F
-        [2,	    2,	    2,  	2,  	2,  	2,  	0,  	0,  	0,  	0,  	0,      0],  # Row G
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row H
+        [365,	    365,	    365,  	365,  	365,  	365,  	620,  	620,  	620,  	620,  	620,      620],  # Row A
+        [395,	    395,	    395,  	395,  	395,  	395,  	630,  	630,  	630,  	630,  	630,      630],  # Row B
+        [410,	    410,	    410,  	410,  	410,  	410,  	660,  	660,  	660,  	660,  	660,      660],  # Row C
+        [450,	    450,	    450,  	450,  	450,  	450,  	740,  	740,  	740,  	740,  	740,      740],  # Row D
+        [470,	    470,	    470,  	470,  	470,  	470,  	780,  	780,  	780,  	780,  	780,      780],  # Row E
+        [500,	    500,	    500,  	500,  	500,  	500,  	850,  	850,  	850,  	850,  	850,      850],  # Row F
+        [525,	    525,	    525,  	525,  	525,  	525,  	880,  	880,  	880,  	880,  	880,      880],  # Row G
+        [590,	    590,	    590,  	590,  	590,  	590,  	940,  	940,  	940,  	940,  	940,      940],  # Row H
 ])
 
 media_map = np.array([
@@ -640,7 +640,7 @@ plate_map_new = {key : np.nan for key in key_wells}
 for row in range(0,len(cell_map)):
     row_letter = Rows(row).name
     for index in range(0,len(cell_map[row])):
-        plate_map[str(row_letter) + str(index+1)].append(Cells(cell_map[row][index]).name)
+        plate_map[str(row_letter) + str(index+1)].append(index)
 
 #doing the same for media
 for row in range(0,len(media_map)):
@@ -887,9 +887,27 @@ plot_exclude = {
     "green_intensity":[],
     "red_intensity":[],
 }
+line_color_map_override = {"365": "610061",
+             "395": "8000A1",
+             "410": "7E00DB",
+             "450": "0046FF",
+             "470": "00A9FF",
+             "500": "00FF92",
+             "525": "4AFF00",
+             "590": "FFDF00",
+             "620": "FF7700",
+             "630": "FF4F00",
+             "660": "FF0000",
+             "740": "C80000",
+             "780": "6D0000",
+             "850": "610000",
+             "880": "4C0000",
+             "940": "300000",
+}
 DefaultConfig.plot_exclude = plot_exclude
-plot_timecourse(sorted_data_df, "OD600", "all", title_extra= " ", save_image = False)
-plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
+DefaultConfig.line_color_map = line_color_map_override
+plot_timecourse(sorted_data_df, "OD600", "average", title_extra= " ", save_image = False)
+plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "average", title_extra= " ", save_image = False)
 """
 plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
 plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= "film on", save_image = False)
