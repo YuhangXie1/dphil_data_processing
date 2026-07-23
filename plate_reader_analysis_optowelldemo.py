@@ -469,9 +469,9 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
         elif plot_type == "both":
 
             if row["cells"] == "JBL137":
-                custom_line_color = {0.28: "blue", 0.0: "red", 2.8: "blue", 0.028:"blue"}
+                custom_line_color = {0.28: "blue", 0.0: "red", 2.8: "blue"}
             else:
-                custom_line_color = {0.28: "black", 0.0: "black", 2.8: "black", 0.028:"blue"}
+                custom_line_color = {0.28: "black", 0.0: "black", 2.8: "black"}
 
             axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
@@ -608,10 +608,10 @@ medium = {
     2: "WM-met-",
 }
 
-
+#actually using wavelength
 cell_map = np.array([
         #1      2       3       4       5       6       7       8       9       10      11      12
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row A
+        [365,	    365,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row A
         [0,	    0,	    0,  	0,  	0,  	0,  	2,  	2,  	2,  	2,  	2,      2],  # Row B
         [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row C
         [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row D
@@ -910,11 +910,11 @@ plot_exclude = {
 DefaultConfig.plot_exclude = plot_exclude
 
 
-plot_timecourse_custom(sorted_data_df, "GFP/OD600", "both", title_extra= "", save_image = False,
+""" plot_timecourse_custom(sorted_data_df, "OD600", "both", title_extra= "", save_image = False,
                        row_filter=lambda row: ((row["cells"] == "JBL001" and row["green_intensity"] in [0.0])
                                                or (row["cells"] == "media")
-                                               or (row["cells"] == "JBL137" and row["green_intensity"] in [0.028, 0.0])))
-
+                                               or (row["cells"] == "JBL137" and row["green_intensity"] in [0.28, 0.0])))
+ """
 
 """
 plot_by_intensity(sorted_data_df,"OD600", "average", -2, title_extra= "", save_image = True)

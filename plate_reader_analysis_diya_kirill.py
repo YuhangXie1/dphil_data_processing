@@ -122,15 +122,20 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
         else:
             alpha = 1
 
+        marker = config.markerstyle_map.get(index_name_cells, "o")
+        marker_color = config.markercolor_map.get(index_name_cells, "grey")
+        line_color = config.line_color_map.get(index_name_green_intensity, "black")
+        line_style = config.linestyle_map.get(index_name_media, "solid")
+
         if plot_type == "average":
             axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         color = config.line_color_map[index_name_green_intensity],
-                        marker = config.markerstyle_map[index_name_cells],
-                        markerfacecolor = config.markercolor_map[index_name_cells],
-                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                        marker = marker,
+                        markerfacecolor = marker_color,
+                        markeredgecolor = marker_color, markersize = 3.0,
+                        linestyle = line_style, linewidth = 1.0,
                         alpha = alpha,
                         )
             
@@ -526,36 +531,35 @@ NROWS = 8
 #copy and paste the light array
 
 DEFAULT_OPTICAL_POWER = np.array([
+    # Channel 0 – Blue (unused, all zeros)
+    np.zeros((NROWS, NCOLS)),
 
-	# Channel 0 (Color 0 or 4). Blue on v0.4c
-	[[0 / (2**(7-row)) for col in range(NCOLS)] for row in range(NROWS)],
-
-    # Channel 1 – Green light (checkerboard starting green at B2)
+    # Channel 1 – Green light
     np.array([
-        # Columns 1–12 (A–L), Rows A–H
-        [2.8,	0.56,   1.4,    2.8,	0.56,   1.4,    2.8,	0.56,   1.4,   	2.8,	0.56,   1.4,],  # Row A
-        [0.0,  	0.28,  	0.28,  	0.0,  	0.28,  	0.28,	0.0,  	0.28,  	0.28,	0.0,  	0.28,  	0.28,],  # Row B
-        [2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,],  # Row C
-        [0.028,	0.028,  2.8,    0.028,	0.028,  2.8,    0.028,	0.028,  2.8,   	0.028,	0.028,  2.8,],  # Row D
-        [1.4,  	2.8,  	0.0,  	1.4,  	2.8,  	0.0, 	1.4,  	2.8,  	0.0,    1.4,  	2.8,  	0.0,],  # Row E
-        [0.28,	0.0,    2.8,    0.28,	0.0,    2.8,  	0.28,	0.0,    2.8,  	0.28,	0.0,    2.8,],  # Row F
-        [0.56,	2.8,    0.028,  0.56,	2.8,    0.028, 	0.56,	2.8,    0.028,  0.56,	2.8,    0.028,],  # Row Gh
-        [2.8,	2.8,    0.0,    0.0,    0.0,    2.8,    2.8,    0.0,    0.0,    0.0,    0.0,    0.0],  # Row H
-    ]),
-	# Channel 2 (Color 2 or 6). Yellow-Green or White on v0.4c
-	[[0 / (2**row) for col in range(NCOLS)] for row in range(NROWS)],    
+    [0.0,	0.0,	0.0,	0.0,	0.0,	0.0,	0.28,	0.28,	0.28,	0.28,	0.28,	0.28],  # Row A
+    [0.0,	0.0,	0.0,	0.0,	0.0,	0.0,	0.28,	0.28,	0.28,	0.28,	0.28,	0.28],  # Row B
+    [0.0,	0.0,	0.0,	0.0,	0.0,	0.0,	0.28,	0.28,	0.28,	0.28,	0.28,	0.28],  # Row C
+    [0.0,	0.0,	0.0,	0.0,	0.0,	0.0,	0.28,	0.28,	0.28,	0.28,	0.28,	0.28],  # Row D
+    [0.0,	0.0,	0.0,	0.0,	0.0,	0.0,	0.28,	0.28,	0.28,	0.28,	0.28,	0.28],  # Row E
+    [0.0,	0.0,	0.0,	0.0,	0.0,	0.0,	0.28,	0.28,	0.28,	0.28,	0.28,	0.28],  # Row F
+    [0.0,	0.0,	0.0,	0.0,	0.0,	0.0,	0.28,	0.28,	0.28,	0.28,	0.28,	0.28],  # Row G
+    [0.0,	0.0,	0.0,	0.0,	0.0,	0.0,	0.28,	0.28,	0.28,	0.28,	0.28,	0.28],  # Row H
+]),
 
-    # Channel 3 – Red light (opposite checkerboard cells)
+    # Channel 2 – Yellow-Green / White (unused, all zeros)
+    np.zeros((NROWS, NCOLS)),
+
+    # Channel 3 – Red light
     np.array([
-        [0.0,	2.8,	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,    2.8],  # Row A
-        [2.8,   2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,   	2.8,    2.8,    2.8],  # Row B
-        [2.8,   2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,   	2.8,    2.8,    2.8],  # Row C
-        [2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,    0.0],  # Row D
-        [2.8,   2.8,    2.8,    2.8,   	2.8,    2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row E
-        [2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8, 	2.8,    2.8,    2.8,    2.8,    2.8,    2.8],  # Row F
-        [2.8,   0.0,    2.8,    2.8,    0.0,    2.8,    2.8,   	0.0,   	2.8,    2.8,    0.0,    2.8],  # Row G
-        [0.0,   0.0,    2.8,   	2.8, 	0.0,  	0.0, 	0.0,  	2.8,  	2.8,  	0.0,  	2.8,   	2.8],  # Row H
-    ])
+    [2.8,	2.8,	2.8,	2.8,	2.8,	2.8,	0.0,	0.0,	0.0,	0.0,	0.0,	0.0],  # Row A
+    [2.8,	2.8,	2.8,	2.8,	2.8,	2.8,	0.0,	0.0,	0.0,	0.0,	0.0,	0.0],  # Row B
+    [2.8,	2.8,	2.8,	2.8,	2.8,	2.8,	0.0,	0.0,	0.0,	0.0,	0.0,	0.0],  # Row C
+    [2.8,	2.8,	2.8,	2.8,	2.8,	2.8,	0.0,	0.0,	0.0,	0.0,	0.0,	0.0],  # Row D
+    [2.8,	2.8,	2.8,	2.8,	2.8,	2.8,	0.0,	0.0,	0.0,	0.0,	0.0,	0.0],  # Row E
+    [2.8,	2.8,	2.8,	2.8,	2.8,	2.8,	0.0,	0.0,	0.0,	0.0,	0.0,	0.0],  # Row F
+    [2.8,	2.8,	2.8,	2.8,	2.8,	2.8,	0.0,	0.0,	0.0,	0.0,	0.0,	0.0],  # Row G
+    [2.8,	2.8,	2.8,	2.8,	2.8,	2.8,	0.0,	0.0,	0.0,	0.0,	0.0,	0.0],  # Row H
+]),
 ])
 
 #plate map for cell type
@@ -604,8 +608,8 @@ cell_map = np.array([
         [14,	    14,	    14,  	17,  	17,  	17,  	14,	    14,	    14,  	17,  	17,  	17],  # Row B
         [15,	    15,	    15,  	18,  	18,  	18,  	15,	    15,	    15,  	18,  	18,  	18],  # Row C
         [7,	    7,	    7,  	10,  	10,  	10,  	7,	    7,	    7,  	10,  	10,  	10],  # Row D
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row E
-        [2,	    2,	    2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,  	2,      2],  # Row F
+        [8,	    8,	    8,  	11,  	11,  	11,  	8,	    8,	    8,  	11,  	11,  	11],  # Row E
+        [9,	    9,	    9,  	12,  	12,  	12,  	9,	    9,	    9,  	12,  	12,  	12],  # Row F
         [6,	    6,	    6,  	6,  	6,  	6,  	6,  	6,  	6,  	6,  	6,      6],  # Row G
         [5,     5,      5,   	5, 	    5,  	5, 	    5,  	5,  	5,  	5,  	5,   	5],  # Row H
 ])
@@ -661,9 +665,8 @@ for key, item in plate_map.items():
 
 #filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 395nm.csv"]
 
-filepaths = ["26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 395nm.csv",
-             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_GFP 488nm.csv", 
-             "26-01-07_new_jbl137_diya_wm/26-01-07_wm_extracted_OD600.csv"]
+filepaths = ["26-06-05_kirill_single_plasmid_2/26-06-05_kirill_single_plasmid_2_extracted_GFP 395nm.csv",
+             "26-06-05_kirill_single_plasmid_2/26-06-05_kirill_single_plasmid_2_extracted_OD600.csv"]
 
 
 #initiating data df
@@ -720,7 +723,7 @@ for well_coord, value in plate_map.items():
     sorted_data_df.loc[value[-1],"green_intensity"] = value[2]
     sorted_data_df.loc[value[-1],"red_intensity"] = value[3]
     sorted_data_df.loc[value[-1],"OD600_raw_array"].append(np.array(file_list["OD600"].loc[str(well_coord)]))
-    sorted_data_df.loc[value[-1],"GFP488_raw_array"].append(np.array(file_list["GFP 488nm"].loc[str(well_coord)]))
+    #sorted_data_df.loc[value[-1],"GFP488_raw_array"].append(np.array(file_list["GFP 488nm"].loc[str(well_coord)]))
     sorted_data_df.loc[value[-1],"GFP395_raw_array"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)]))
     sorted_data_df.loc[value[-1],"GFP/OD600_raw_array"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
 
@@ -734,8 +737,8 @@ for index, row in sorted_data_df.iterrows():
     #mean, std data
     sorted_data_df.at[index,"OD600_average"] = np.mean(sorted_data_df.loc[index,"OD600_raw_array"], axis = 0)
     sorted_data_df.at[index,"OD600_std"] = np.std(sorted_data_df.loc[index,"OD600_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP488_average"] = np.mean(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP488_std"] = np.std(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
+   # sorted_data_df.at[index,"GFP488_average"] = np.mean(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
+   # sorted_data_df.at[index,"GFP488_std"] = np.std(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
     sorted_data_df.at[index,"GFP395_average"] = np.mean(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
     sorted_data_df.at[index,"GFP395_std"] = np.std(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
 
@@ -776,7 +779,7 @@ DefaultConfig.line_alpha_map = line_alpha_map
 plot_exclude = {
     "cells":[],
     "media":[],
-    "green_intensity":["2.8","1.4","0.56","0.028"],
+    "green_intensity":[],
     "red_intensity":[],
 }
 
@@ -803,7 +806,7 @@ alpha_map_override = {"2.8": 1,
                  "0":0.1,
 }
 
-save_file_path = "26-01-07_new_jbl137_diya_wm"
+save_file_path = "26-06-05_kirill_single_plasmid_2"
 
 #legend handles
 cell_handles = [
@@ -854,8 +857,8 @@ media_handles = [
 
 
 
-DefaultConfig.save_file_path = "26-01-07_new_jbl137_diya_wm"
-"""
+DefaultConfig.save_file_path = "26-06-05_kirill_single_plasmid_2"
+
 plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
 plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= "film on", save_image = False)
 plot_timecourse(sorted_data_df, "GFP/OD600", "average", title_extra= "film on", save_image = False)
@@ -864,7 +867,7 @@ plot_timecourse(sorted_data_df, "OD600", "all", title_extra= "film on", save_ima
 plot_timecourse(sorted_data_df, "GFP395", "all", title_extra= "film on", save_image = False)
 plot_timecourse(sorted_data_df, "GFP/OD600", "all", title_extra= "film on", save_image = False)
 plot_timecourse(sorted_data_df, "GFP488", "all", title_extra= "film on", save_image = False)
-"""
+
 plot_exclude = {
     "cells":[],
     "media":[],
