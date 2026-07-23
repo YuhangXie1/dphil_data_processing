@@ -442,9 +442,9 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
         elif plot_type == "both":
 
             if row["cells"] == "JBL137":
-                custom_line_color = {0.28: "blue", 0.0: "red", 2.8: "blue"}
+                custom_line_color = {0.28: "blue", 0.0: "red", 2.8: "blue", 0.028:"blue"}
             else:
-                custom_line_color = {0.28: "black", 0.0: "black", 2.8: "black"}
+                custom_line_color = {0.28: "black", 0.0: "black", 2.8: "black", 0.028:"blue"}
 
             axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
@@ -858,10 +858,10 @@ plot_exclude = {
 DefaultConfig.plot_exclude = plot_exclude
 
 
-plot_timecourse_custom(sorted_data_df, "OD600", "both", title_extra= "", save_image = False,
+plot_timecourse_custom(sorted_data_df, "GFP/OD600", "both", title_extra= "", save_image = False,
                        row_filter=lambda row: ((row["cells"] == "JBL001" and row["green_intensity"] in [0.0])
                                                or (row["cells"] == "media")
-                                               or (row["cells"] == "JBL137" and row["green_intensity"] in [0.28, 0.0])))
+                                               or (row["cells"] == "JBL137" and row["green_intensity"] in [0.028, 0.0])))
 
 
 """
