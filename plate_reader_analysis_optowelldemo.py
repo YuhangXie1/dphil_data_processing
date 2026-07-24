@@ -640,7 +640,7 @@ plate_map_new = {key : np.nan for key in key_wells}
 for row in range(0,len(cell_map)):
     row_letter = Rows(row).name
     for index in range(0,len(cell_map[row])):
-        plate_map[str(row_letter) + str(index+1)].append(index)
+        plate_map[str(row_letter) + str(index+1)].append(int(cell_map[row][index]))
 
 #doing the same for media
 for row in range(0,len(media_map)):
@@ -761,9 +761,9 @@ def load_data(filepaths):
 
 
 
-filepaths = ["26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_GFP 395nm.csv",
-             "26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_GFP 480nm.csv", 
-             "26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_OD600.csv"]
+filepaths = ["26-07-23_optowell_test2/26-07-23_optowell_test2_extracted_GFP 395nm.csv",
+             "26-07-23_optowell_test2/26-07-23_optowell_test2_extracted_GFP 480nm.csv", 
+             "26-07-23_optowell_test2/26-07-23_optowell_test2_extracted_OD600.csv"]
 
 sorted_data_df = load_data(filepaths)
 
@@ -828,7 +828,7 @@ alpha_map = {"2.8": 1,
                  "0":0.1,
 }
 
-save_file_path = "26-07-22_optowell_test1"
+save_file_path = "26-07-23_optowell_test2"
 
 #legend handles
 cell_handles = [
@@ -879,7 +879,7 @@ media_handles = [
 
 
 
-DefaultConfig.save_file_path = "26-07-22_optowell_test1"
+DefaultConfig.save_file_path = "26-07-23_optowell_test2"
 plot_exclude = {
     "cells":["media"],
     "media":[],
@@ -887,27 +887,43 @@ plot_exclude = {
     "green_intensity":[],
     "red_intensity":[],
 }
-line_color_map_override = {"365": "610061",
-             "395": "8000A1",
-             "410": "7E00DB",
-             "450": "0046FF",
-             "470": "00A9FF",
-             "500": "00FF92",
-             "525": "4AFF00",
-             "590": "FFDF00",
-             "620": "FF7700",
-             "630": "FF4F00",
-             "660": "FF0000",
-             "740": "C80000",
-             "780": "6D0000",
-             "850": "610000",
-             "880": "4C0000",
-             "940": "300000",
+line_color_map_override = {365: "#610061",
+             395: "#8000A1",
+             410: "#7E00DB",
+             450: "#0046FF",
+             470: "#00A9FF",
+             500: "#00FF92",
+             525: "#4AFF00",
+             590: "#FFDF00",
+             620: "#FF7700",
+             630: "#FF4F00",
+             660: "#FF0000",
+             740: "#C80000",
+             780: "#6D0000",
+             850: "#610000",
+             880: "#4C0000",
+             940: "#300000",
 }
 DefaultConfig.plot_exclude = plot_exclude
 DefaultConfig.line_color_map = line_color_map_override
-plot_timecourse(sorted_data_df, "OD600", "average", title_extra= " ", save_image = False)
-plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "average", title_extra= " ", save_image = False)
+plot_timecourse(sorted_data_df, "OD600", "average", title_extra= " ", save_image = True)
+plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "average", title_extra= " ", save_image = True)
+plot_timecourse(sorted_data_df, "OD600", "all", title_extra= " ", save_image = True)
+plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = True)
+
+
+DefaultConfig.plot_exclude = {
+    "cells":[365, 395, 410, 450, 470, 500, 590, 620, 660, 740, 780, 850, 880, 940],
+    "media":[],
+    #"green_intensity":[2.8,1.4,0.56,0.028],
+    "green_intensity":[],
+    "red_intensity":[],
+}
+title_extra_override = "525 vs 630"
+plot_timecourse(sorted_data_df, "OD600", "average", title_extra= title_extra_override, save_image = True)
+plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "average", title_extra= title_extra_override, save_image = True)
+plot_timecourse(sorted_data_df, "OD600", "all", title_extra= title_extra_override, save_image = True)
+plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "all", title_extra= title_extra_override, save_image = True)
 """
 plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
 plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= "film on", save_image = False)
@@ -950,7 +966,7 @@ def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_s
                                    #plot_control,
                                    ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
                         plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
-                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map,
                         alpha_used = False, save_image = False, save_filepath = None):
     
     if ylabel is None:
@@ -1068,11 +1084,11 @@ def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_s
         plt.close(fig)
 
 
-plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
+#plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
 #plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
 #plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
 #plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
-plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
+#plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
 #plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
 #plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
 #plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
@@ -1084,7 +1100,7 @@ plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
 #GFP by intensity - average over time
 def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
                         plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
-                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map,
                         alpha_used = False, save_image = False, save_filepath = None):
     
     if ylabel is None:
@@ -1237,7 +1253,7 @@ plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
 
 def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
                         plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
-                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
+                        linestyle_map = linestyle_map, line_color_map = line_color_map,
                         alpha_used = False, save_image = False, save_filepath = None):
 #calculating fold changes
     if ylabel is None:
@@ -1360,4 +1376,136 @@ def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: 
         plt.close(fig)
 
 
-plot_by_intensity_foldchange(sorted_data_df, "OD600", -2)
+#plot_by_intensity_foldchange(sorted_data_df, "OD600", -2)
+
+
+
+def plot_by_wavelength(dataframe, y_data, plot_type, data_timearray_loc, ylabel: str | None = None, title: str | None = None,
+                              title_extra: str = "",
+                              xlabel = "Wavelength (nm)",
+                                config: PlotConfig = DefaultConfig, save_image = False):
+    """
+    Plots y_data over wavelength at a chosen time point
+    
+    :param dataframe: dataframe where the data is
+    :param y_data: data to plot
+    :param plot_type: select whether 'average' are plotted or 'all' data
+    :param data_timearray_loc: chosen time point by index
+    :param ylabel: optional override for the ylabel text
+    :type ylabel: str | None
+    :param title: optional override for title text
+    :type title: str | None
+    :param title_extra: optional extra to tag onto the end of the title text
+    :type title_extra: str
+    :param xlabel: optional override for the xlabel text
+    :param config: config file for styling and saving the image
+    :type config: PlotConfig
+    :param save_image: if True, then image is saved instead of displayed
+    """
+    if ylabel is None:
+        ylabel = y_data
+
+    if title is None:
+        title = f"{ylabel} - by wavelength - {plot_type} - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+    by_intensity_df = dataframe[["cells","media","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std", f"{y_data}_raw"]].copy()
+    by_intensity_df[f"{y_data}_average"] = by_intensity_df[f"{y_data}_average"].apply(lambda x: x[data_timearray_loc])
+    by_intensity_df[f"{y_data}_std"] = by_intensity_df[f"{y_data}_std"].apply(lambda x: x[data_timearray_loc])
+    by_intensity_df[f"{y_data}_raw"] = by_intensity_df[f"{y_data}_raw"].apply(lambda x: [array[data_timearray_loc] for array in x])
+    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
+    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
+
+    fig, axs = plt.subplots()
+
+    for media in set(by_intensity_df["media"]):
+        if media in config.plot_exclude["media"]:
+            continue
+        data_select_by_media = by_intensity_df.loc[by_intensity_df["media"] == media]
+
+        if plot_type == "average":
+            i_range = range(1)
+        elif plot_type == "all":
+            lengths = [len(r) for r in data_select_by_media[f"{y_data}_raw"]]
+            max_len = int(max(lengths))
+            i_range = range(max_len)
+
+        for i in i_range:
+
+            x = data_select_by_media["cells"].values.copy()
+            
+            if plot_type == "average":
+                y = data_select_by_media[f"{y_data}_average"].values.copy()
+            elif plot_type == "all":
+                y = np.array([ (row[i] if i < len(row) else np.nan) for row in data_select_by_media[f"{y_data}_raw"] ])
+
+
+            yerr = data_select_by_media[f"{y_data}_std"].values.copy()
+
+            order = np.argsort(x)
+            x = x[order]
+            y = y[order]
+            yerr = yerr[order]
+
+            # Add scatter points with gradient colors
+            scatter = axs.scatter(x, y,
+                                facecolor = config.markercolor_map[media],
+                                edgecolor = config.markercolor_map[media], 
+                                )
+
+            # Add error bars
+            if plot_type == "average":
+                axs.errorbar(x, y, yerr=yerr, fmt='none',
+                             ecolor = config.markercolor_map[media],
+                            )
+
+            plot = axs.plot(x,y, color = config.markercolor_map[media], linestyle = config.linestyle_map[media])
+
+    # labels
+    leg1 = axs.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.00),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg1)
+
+    leg2 = axs.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg2)
+
+    x_axis = axs.set_xlabel(xlabel)
+    x_axis.set_color("black")
+
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+    if save_image == True:
+        try:
+            Path(os.path.join(config.save_file_path, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(config.save_file_path, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+DefaultConfig.markercolor_map = {
+    "WM-met+": "black",
+    "WM-met-": "red",
+
+}
+plot_by_wavelength(sorted_data_df, "GFP 395nm/OD600", "average", -2, title_extra= "t12", save_image= True)
+plot_by_wavelength(sorted_data_df, "GFP 395nm/OD600", "average", -1, title_extra= "t24", save_image= True)
+plot_by_wavelength(sorted_data_df, "GFP 395nm/OD600", "all", -2, title_extra= "t12", save_image= True)
+plot_by_wavelength(sorted_data_df, "GFP 395nm/OD600", "all", -1, title_extra= "t24", save_image= True)

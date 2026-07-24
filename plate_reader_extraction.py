@@ -82,14 +82,14 @@ all_plate_table_df = {}
 plate_reader = {"downstairs":0, "upstairs":1}
 chosen_plate_reader = 0
 
-data_folder = "26-07-22_optowell_test1"
+data_folder = "26-07-23_optowell_test2"
 data_files = ["t0.xlsx",
              "t5.xlsx",
              "t12.xlsx",
              "t24.xlsx",
              ]
 
-save_filename_starter = "26-07-22_optowell_test1"
+save_filename_starter = data_folder
 
 #extracting data
 for filepath in data_files:
