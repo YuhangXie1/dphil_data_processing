@@ -150,10 +150,11 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
             alpha = 1
 
         if plot_type == "average":
+            print(f"cells {index_name_cells}, green_intensity {index_name_green_intensity}")
             axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
-                        color = config.line_color_map.get(index_name_cells, config.default_linecolor),
+                        color = config.line_color_map.get(index_name_green_intensity, config.default_linecolor),
                         marker = config.markerstyle_map.get(index_name_cells, config.default_markerstyle),
                         markerfacecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor),
                         markeredgecolor = config.markercolor_map.get(index_name_cells, config.default_markercolor), markersize = 3.0,
@@ -560,14 +561,14 @@ DEFAULT_OPTICAL_POWER = np.array([
     # Channel 1 – Green light (checkerboard starting green at B2)
     np.array([
         # Columns 1–12 (A–L), Rows A–H
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row A
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row B
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row C
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row D
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row E
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row F
-        [1,	1,  1,    1,	1,   1,    0,	0,   0,   	0,	0,   0],  # Row G
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row H
+        [35,	35,  35,    35,	35,   35,    35,	35,   35,   	35,	35,   35],  # Row A
+        [35,	35,  35,    35,	35,   35,    35,	35,   35,   	35,	35,   35],  # Row B
+        [35,	35,  35,    35,	35,   35,    35,	35,   35,   	35,	35,   35],  # Row C
+        [35,	35,  35,    35,	35,   35,    35,	35,   35,   	35,	35,   35],  # Row D
+        [35,	35,  35,    35,	35,   35,    35,	35,   35,   	35,	35,   35],  # Row E
+        [35,	35,  35,    35,	35,   35,    35,	35,   35,   	35,	35,   35],  # Row F
+        [6,	6,  6,    6,	6,   6,    35,	35,   35,   	35,	35,   35],  # Row G
+        [35,	35,  35,    35,	35,   35,    35,	35,   35,   	35,	35,   35],  # Row H
     ]),
 	# Channel 2 (Color 2 or 6). Yellow-Green or White on v0.4c
 	[[0 / (2**row) for col in range(NCOLS)] for row in range(NROWS)],    
@@ -757,17 +758,73 @@ def load_data(filepaths):
     return sorted_data_df
 
 
-
-
-
-
 filepaths = ["26-07-23_optowell_test2/26-07-23_optowell_test2_extracted_GFP 395nm.csv",
              "26-07-23_optowell_test2/26-07-23_optowell_test2_extracted_GFP 480nm.csv", 
              "26-07-23_optowell_test2/26-07-23_optowell_test2_extracted_OD600.csv"]
 
-sorted_data_df = load_data(filepaths)
+filepaths_2 = ["26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_GFP 395nm.csv",
+             "26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_GFP 480nm.csv", 
+             "26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_OD600.csv"]
+
+sorted_data_df_1 = load_data(filepaths_2)
 
 
+intensity_2 = np.array([
+        # Columns 1–12 (A–L), Rows A–H
+        [100,	100,  100,    100,	100,   100,    100,	100,   100,   	100,	100,   100],  # Row A
+        [100,	100,  100,    100,	100,   100,    100,	100,   100,   	100,	100,   100],  # Row B
+        [100,	100,  100,    100,	100,   100,    100,	100,   100,   	100,	100,   100],  # Row C
+        [100,	100,  100,    100,	100,   100,    100,	100,   100,   	100,	100,   100],  # Row D
+        [100,	100,  100,    100,	100,   100,    100,	100,   100,   	100,	100,   100],  # Row E
+        [100,	100,  100,    100,	100,   100,    100,	100,   100,   	100,	100,   100],  # Row F
+        [7,	7,  7,    7,	7,   7,    100,	100,   100,   	100,	100,   100],  # Row G
+        [100,	100,  100,    100,	100,   100,    100,	100,   100,   	100,	100,   100],  # Row H
+    ])
+
+#generating plate map
+key_rows = ["A", "B", "C", "D", "E", "F", "G", "H"]
+key_columns = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+key_wells = [str(row)+str(col) for row in key_rows for col in key_columns]
+plate_map = {key : [] for key in key_wells}
+
+NCOLS = 12
+NROWS = 8
+
+#turn light array into labels - need to code
+plate_map_new = {key : np.nan for key in key_wells}
+
+#placing cell names into arrays in the plate_map
+for row in range(0,len(cell_map)):
+    row_letter = Rows(row).name
+    for index in range(0,len(cell_map[row])):
+        plate_map[str(row_letter) + str(index+1)].append(int(cell_map[row][index]))
+
+#doing the same for media
+for row in range(0,len(media_map)):
+    row_letter = Rows(row).name
+    for index in range(0,len(media_map[row])):
+        plate_map[str(row_letter) + str(index+1)].append(medium[media_map[row][index]])
+
+#doing the same for the color intensities
+green_array = intensity_2
+for row in range(0,len(green_array)):
+    row_letter = Rows(row).name
+    for index in range(0,len(green_array[row])):
+        plate_map[str(row_letter) + str(index+1)].append(green_array[row][index])
+
+red_array = DEFAULT_OPTICAL_POWER[2]
+for row in range(0,len(red_array)):
+    row_letter = Rows(row).name
+    for index in range(0,len(red_array[row])):
+        plate_map[str(row_letter) + str(index+1)].append(red_array[row][index])
+
+#making a concatinated string name for easy accessing
+for key, item in plate_map.items():
+    plate_map[key].append("_".join(map(str, item)))
+sorted_data_df_2 = load_data(filepaths)
+
+sorted_data_df = pd.concat([sorted_data_df_1, sorted_data_df_2])
+#sorted_data_df = sorted_data_df_1
 
 # Color and style map
 style_map = {
@@ -801,12 +858,12 @@ linestyle_map = {"WM-met+": "solid",
 plot_exclude = {
     "cells":[],
     "media":[],
-    "green_intensity":["0.0","1.4","0.56","0.028"],
+    "green_intensity":[],
     "red_intensity":[],
 }
 
 #od600 - average
-line_color_map = {"2.8": (0.0,1.0,0.0),
+line_color_map = {"100": (0.0,1.0,0.0),
              "1.4": (0.5,0.5,0.0),
              "0.56":(0.6,0.4,0.0),
              "0.28":(0.8,0.2,0.0),
@@ -904,8 +961,27 @@ line_color_map_override = {365: "#610061",
              880: "#4C0000",
              940: "#300000",
 }
-""" DefaultConfig.plot_exclude = plot_exclude
+
+
+DefaultConfig.plot_exclude = {
+    "cells":[#365, 395, 410, 450, 470, 500, 590, 620, 660, 740, 780, 850, 880, 940,
+             525,
+             630,
+            ],
+    "media":[],
+    #"green_intensity":[2.8,1.4,0.56,0.028],
+    "green_intensity":[],
+    "red_intensity":[],
+}
+line_color_map_override = {100: "red",
+             35: "pink",
+             6:"green",
+             7:"blue",
+}
 DefaultConfig.line_color_map = line_color_map_override
+#plot_timecourse(sorted_data_df, "OD600", "average", title_extra= " ", save_image = False)
+
+"""
 plot_timecourse(sorted_data_df, "OD600", "average", title_extra= " ", save_image = True)
 plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "average", title_extra= " ", save_image = True)
 plot_timecourse(sorted_data_df, "OD600", "all", title_extra= " ", save_image = True)
@@ -1419,48 +1495,50 @@ def plot_by_wavelength(dataframe, y_data, plot_type, data_timearray_loc, ylabel:
 
     fig, axs = plt.subplots()
 
-    for media in set(by_intensity_df["media"]):
-        if media in config.plot_exclude["media"]:
-            continue
-        data_select_by_media = by_intensity_df.loc[by_intensity_df["media"] == media]
+    for intensity in set(by_intensity_df["green_intensity"]):
+        data_select = by_intensity_df.loc[by_intensity_df["green_intensity"] == intensity]
+        for media in set(by_intensity_df["media"]):
+            if media in config.plot_exclude["media"]:
+                continue
+            data_select_by_media = data_select.loc[by_intensity_df["media"] == media]
 
-        if plot_type == "average":
-            i_range = range(1)
-        elif plot_type == "all":
-            lengths = [len(r) for r in data_select_by_media[f"{y_data}_raw"]]
-            max_len = int(max(lengths))
-            i_range = range(max_len)
-
-        for i in i_range:
-
-            x = data_select_by_media["cells"].values.copy()
-            
             if plot_type == "average":
-                y = data_select_by_media[f"{y_data}_average"].values.copy()
+                i_range = range(1)
             elif plot_type == "all":
-                y = np.array([ (row[i] if i < len(row) else np.nan) for row in data_select_by_media[f"{y_data}_raw"] ])
+                lengths = [len(r) for r in data_select_by_media[f"{y_data}_raw"]]
+                max_len = int(max(lengths))
+                i_range = range(max_len)
+
+            for i in i_range:
+
+                x = data_select_by_media["cells"].values.copy()
+                
+                if plot_type == "average":
+                    y = data_select_by_media[f"{y_data}_average"].values.copy()
+                elif plot_type == "all":
+                    y = np.array([ (row[i] if i < len(row) else np.nan) for row in data_select_by_media[f"{y_data}_raw"] ])
 
 
-            yerr = data_select_by_media[f"{y_data}_std"].values.copy()
+                yerr = data_select_by_media[f"{y_data}_std"].values.copy()
 
-            order = np.argsort(x)
-            x = x[order]
-            y = y[order]
-            yerr = yerr[order]
+                order = np.argsort(x)
+                x = x[order]
+                y = y[order]
+                yerr = yerr[order]
 
-            # Add scatter points with gradient colors
-            scatter = axs.scatter(x, y,
-                                facecolor = config.markercolor_map[media],
-                                edgecolor = config.markercolor_map[media], 
+                # Add scatter points with gradient colors
+                scatter = axs.scatter(x, y,
+                                    facecolor = config.line_color_map[intensity],
+                                    edgecolor = config.line_color_map[intensity], 
+                                    )
+
+                # Add error bars
+                if plot_type == "average":
+                    axs.errorbar(x, y, yerr=yerr, fmt='none',
+                                ecolor = config.line_color_map[intensity],
                                 )
 
-            # Add error bars
-            if plot_type == "average":
-                axs.errorbar(x, y, yerr=yerr, fmt='none',
-                             ecolor = config.markercolor_map[media],
-                            )
-
-            plot = axs.plot(x,y, color = config.markercolor_map[media], linestyle = config.linestyle_map[media])
+                plot = axs.plot(x,y, color = config.line_color_map[intensity], linestyle = config.linestyle_map[media])
 
     # labels
     leg1 = axs.legend(
@@ -1505,6 +1583,8 @@ DefaultConfig.markercolor_map = {
     "WM-met-": "red",
 
 }
+plot_by_wavelength(sorted_data_df, "OD600", "average", -2, title_extra= "t12", save_image= False)
+
 """ plot_by_wavelength(sorted_data_df, "GFP 395nm/OD600", "average", -2, title_extra= "t12", save_image= True)
 plot_by_wavelength(sorted_data_df, "GFP 395nm/OD600", "average", -1, title_extra= "t24", save_image= True)
 plot_by_wavelength(sorted_data_df, "GFP 395nm/OD600", "all", -2, title_extra= "t12", save_image= True)
