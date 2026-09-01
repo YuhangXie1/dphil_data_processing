@@ -29,11 +29,17 @@ class PlotConfig:
     alpha_used: bool
     save_file_path: str
 
+    default_markerstyle: str = "o"
+    default_markercolor: str = "blue"
+    default_linestyle: str = "solid"
+    default_linecolor: str = "black"
+    default_linealpha: float = 1.0
+
 # Functions
 def default_plot_config(save_file_path: str = ".") -> PlotConfig:
     return PlotConfig(
-        markerstyle_map = {"JBL001":"s", "JBL137":"o", "media":"^"},
-        markercolor_map = {"JBL001":"black", "JBL137":"blue", "media":"black"},
+        markerstyle_map = {"JBL001":"s", "JBL137":"o", "YX001":"o", "media":"^"},
+        markercolor_map = {"JBL001":"black", "JBL137":"blue", "YX001": "blue", "media":"black"},
         linestyle_map = {"WM-met+": "solid", "WM-met-": "dashed", "LB": "solid"},
         line_color_map = {},  # build from data later
         line_alpha_map = {},
@@ -72,6 +78,27 @@ def process_data_to_mean(data_dict):
         data_dict_processed[key] = mean_std_cv_array
     print(data_dict_processed)
     return data_dict_processed
+
+def build_intensity_colour_map(green_intensities, cmap_name = None) -> Dict[Any,tuple]:
+    green_intensities_set = set(green_intensities)
+    min_intensity = min(green_intensities_set)
+    max_intensity = max(green_intensities_set)
+
+    if cmap_name is None:
+        cmap = LinearSegmentedColormap.from_list("red_to_green",[(1,0,0), (0,1,0)])
+    else:
+        cmap = plt.get_cmap(cmap_name)
+
+    if max_intensity == min_intensity:
+        print("only one green intensity")
+        return {}
+    
+    norm = mcolors.Normalize(vmin=min_intensity,vmax=max_intensity)
+
+    return {
+            intensity: cmap(norm(intensity))
+            for intensity in green_intensities_set
+        }
 
 def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
                             xlabel = "Time (hrs)",
@@ -122,26 +149,21 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
         else:
             alpha = 1
 
-        marker = config.markerstyle_map.get(index_name_cells, "o")
-        marker_color = config.markercolor_map.get(index_name_cells, "grey")
-        line_color = config.line_color_map.get(index_name_green_intensity, "black")
-        line_style = config.linestyle_map.get(index_name_media, "solid")
-
         if plot_type == "average":
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         color = config.line_color_map[index_name_green_intensity],
-                        marker = marker,
-                        markerfacecolor = marker_color,
-                        markeredgecolor = marker_color, markersize = 3.0,
-                        linestyle = line_style, linewidth = 1.0,
+                        marker = config.markerstyle_map[index_name_cells],
+                        markerfacecolor = config.markercolor_map[index_name_cells],
+                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
+                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
                         alpha = alpha,
                         )
             
         elif plot_type == "all":
-            for repeat in row[f"{y_data}_raw_array"]:
-                axs.plot(row["timepoints"], repeat,
+            for repeat in row[f"{y_data}_raw"]:
+                axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             color = config.line_color_map[index_name_green_intensity],
                             marker = config.markerstyle_map[index_name_cells],
@@ -152,7 +174,7 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
                             )
         
         elif plot_type == "both":
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         #color = config.line_color_map[index_name_green_intensity],
@@ -163,8 +185,8 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
                         alpha = 1.0,
                         )
             
-            for repeat in row[f"{y_data}_raw_array"]:
-                axs.plot(row["timepoints"], repeat,
+            for repeat in row[f"{y_data}_raw"]:
+                axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             #color = config.line_color_map[index_name_green_intensity],
                             linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
@@ -408,6 +430,19 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
         index_name_media = row["media"]
         index_name_green_intensity = row["green_intensity"]
         index_name_red_intensity = row["red_intensity"]
+        index_name_color = "green" if index_name_green_intensity > 0 else "red"
+        if "_O" in index_name_cells:
+            stationary_phase = "Stationary"
+        elif "_D" in index_name_cells:
+            stationary_phase = "Refreshed"
+
+        if "K_" in index_name_cells:
+            cell_type = "Single plasmid"
+        elif "N_" in index_name_cells:
+            cell_type = "Double plasmid ctrl"
+        else:
+            cell_type = "media"
+        
 
         if (index_name_cells in config.plot_exclude["cells"]
             or index_name_media in config.plot_exclude["media"]
@@ -421,37 +456,37 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
             alpha = 1
 
         if plot_type == "average":
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
-                        color = config.line_color_map[index_name_green_intensity],
-                        marker = config.markerstyle_map[index_name_cells],
-                        markerfacecolor = config.markercolor_map[index_name_cells],
-                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                        color = config.line_color_map[index_name_color],
+                        marker = config.markerstyle_map[cell_type],
+                        markerfacecolor = config.markercolor_map[cell_type],
+                        markeredgecolor = config.markercolor_map[cell_type], markersize = 3.0,
+                        linestyle = config.linestyle_map[stationary_phase], linewidth = 1.0,
                         alpha = alpha,
                         )
             
         elif plot_type == "all":
             for repeat in row[f"{y_data}_raw_array"]:
-                axs.plot(row["timepoints"], repeat,
+                axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
-                            color = config.line_color_map[index_name_green_intensity],
-                            marker = config.markerstyle_map[index_name_cells],
-                            markerfacecolor = config.markercolor_map[index_name_cells],
-                            markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                            linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
+                            color = config.line_color_map[index_name_color],
+                            marker = config.markerstyle_map[cell_type],
+                            markerfacecolor = config.markercolor_map[cell_type],
+                            markeredgecolor = config.markercolor_map[cell_type], markersize = 3.0,
+                            linestyle = config.linestyle_map[stationary_phase], linewidth = 1.0,
                             alpha = alpha,
                             )
         
         elif plot_type == "both":
 
             if row["cells"] == "JBL137":
-                custom_line_color = {0.28: "blue", 0.0: "red", 2.8: "blue"}
+                custom_line_color = {0.28: "blue", 0.0: "red", 2.8: "blue", 0.028:"blue"}
             else:
-                custom_line_color = {0.28: "black", 0.0: "black", 2.8: "black"}
+                custom_line_color = {0.28: "black", 0.0: "black", 2.8: "black", 0.028:"blue"}
 
-            axs.errorbar(row["timepoints"], row[f"{y_data}_average"],
+            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
                         yerr = row[f"{y_data}_std"], capsize = 2.0,
 
                         color = custom_line_color[index_name_green_intensity],
@@ -466,7 +501,7 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
             for repeat in row[f"{y_data}_raw_array"]:
                 if row["cells"] == "JBL001" or row["cells"] == "media":
                     continue
-                axs.plot(row["timepoints"], repeat,
+                axs.plot(row[f"{y_data}_timepoints"], repeat,
                         
                             color = custom_line_color[index_name_green_intensity],
                             linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
@@ -484,8 +519,8 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
     axs.add_artist(leg1)
 
     leg2 = axs.legend(
-        handles=media_handles,
-        title="Media",
+        handles=stationary_handles,
+        title="Stationary phase",
         loc="upper left",
         bbox_to_anchor=(1.02, 0.65),
         borderaxespad=0.0,
@@ -493,8 +528,8 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
     axs.add_artist(leg2)
 
     leg3 = axs.legend(
-        handles=intensity_handles,
-        title="Green light intensity",
+        handles=color_handles,
+        title="Applied light",
         loc="upper left",
         bbox_to_anchor=(1.02, 0.35),
         borderaxespad=0.0,
@@ -527,8 +562,6 @@ plate_map = {key : [] for key in key_wells}
 NCOLS = 12
 NROWS = 8
 ### MAIN ###
-
-#copy and paste the light array
 
 DEFAULT_OPTICAL_POWER = np.array([
     # Channel 0 – Blue (unused, all zeros)
@@ -660,123 +693,124 @@ for row in range(0,len(red_array)):
 for key, item in plate_map.items():
     plate_map[key].append("_".join(map(str, item)))
 
+def load_data(filepaths):
+    
+    #initialises columns of dataframe
+    indexes = sorted(set([value[-1] for value in plate_map.values()]))
+    columns = ["cells", #str
+               "media", #str
+               "green_intensity", #float
+               "red_intensity", #float
+               #data
+               ]
+
+    for path in filepaths:
+        name = path.split("_")[-1].replace(".csv","")
+        columns.append(name + "_timepoints")
+        columns.append(name + "_raw")
+        columns.append(name + "_average")
+        columns.append(name + "_std")
+        if name != "OD600":
+            columns.append(name + "/OD600_timepoints")
+            columns.append(name + "/OD600_raw")
+            columns.append(name + "/OD600_average")
+            columns.append(name + "/OD600_std")   
+
+    sorted_data_df = pd.DataFrame(0.0, index=indexes, columns=columns).astype(object)
+
+    #initialising arrays for raw data
+    for column in sorted_data_df.columns:
+        if column.split("_")[-1] == "raw":
+            sorted_data_df[column] = [[] for _ in range(len(sorted_data_df))]
+
+    #Populating the DF
+    #reading extracted data file csv
+    file_list = {}
+    channel_list = []
+    for filepath in filepaths:
+        filename = filepath.split("_")[-1].replace(".csv","")
+        channel_list.append(filename)
+        data = pd.read_csv(filepath, header = 0, index_col= 0)
+        
+        #working out the time points
+        timepoints = list(data.columns.values)
+        try:
+            initial_time = datetime.strptime(timepoints[0], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            initial_time = datetime.strptime(timepoints[0], "%d/%m/%Y %H:%M:%S")
+
+        timepoints_hrs = []
+        for item in timepoints:
+            try:
+                timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                timepoints_datetime = datetime.strptime(item, "%d/%m/%Y %H:%M:%S")
+            time_delta = timepoints_datetime - initial_time
+            timepoints_hrs.append(time_delta.total_seconds() / 3600)
+
+        #renaming file column to the time
+        data = data.rename(columns={old:new for (old,new) in zip(timepoints, timepoints_hrs)})
+        
+        file_list[filename] = data
+
+
+    #populate raw data from wells
+    for well_coord, value in plate_map.items():
+        sorted_data_df.loc[value[-1],"cells"] = value[0]
+        sorted_data_df.loc[value[-1],"media"] = value[1]
+        sorted_data_df.loc[value[-1],"green_intensity"] = value[2]
+        sorted_data_df.loc[value[-1],"red_intensity"] = value[3]
+        
+
+        for channel in channel_list:
+            sorted_data_df.loc[value[-1], channel + "_raw"].append(np.array(file_list[channel].loc[str(well_coord)]))
+            sorted_data_df.at[value[-1], channel + "_timepoints"] = file_list[channel].columns.values
+            if channel != "OD600":
+                sorted_data_df.loc[value[-1], channel + "/OD600_raw"].append(np.array(file_list[channel].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
+                sorted_data_df.at[value[-1], channel + "/OD600_timepoints"] = file_list[channel].columns.values
+
+    #calculating means and std
+    for index, row in sorted_data_df.iterrows():
+        for channel in channel_list:
+            #mean, std data
+            sorted_data_df.at[index, channel + "_average"] = np.mean(sorted_data_df.loc[index, channel + "_raw"], axis = 0)
+            sorted_data_df.at[index, channel + "_std"] = np.std(sorted_data_df.loc[index, channel + "_raw"], axis = 0)
+            if channel != "OD600":
+                sorted_data_df.at[index, channel + "/OD600_average"] = np.mean(sorted_data_df.loc[index,channel + "/OD600_raw"], axis = 0)
+                sorted_data_df.at[index, channel + "/OD600_std"] = np.std(sorted_data_df.loc[index, channel + "/OD600_raw"], axis = 0)
+
+    # Generating color map
+    DefaultConfig.line_color_map = build_intensity_colour_map(sorted_data_df["green_intensity"].unique())
+
+    return sorted_data_df
 
 
 
 
 
-#filepaths = ["25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_OD600.csv","25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 488nm.csv", "25-11-19_diya_4/25-11-18_diya2_dose_curve_low_gain_extracted_GFP 395nm.csv"]
 
 filepaths = ["26-06-05_kirill_single_plasmid_2/26-06-05_kirill_single_plasmid_2_extracted_GFP 395nm.csv",
              "26-06-05_kirill_single_plasmid_2/26-06-05_kirill_single_plasmid_2_extracted_OD600.csv"]
 
+sorted_data_df = load_data(filepaths)
 
-#initiating data df
-indexes = sorted(set([value[-1] for value in plate_map.values()]))
-
-sorted_data_df = pd.DataFrame(0.0, index=indexes, columns=["cells",
-                                                           "media",
-                                                           "green_intensity",
-                                                           "red_intensity",
-                                                           "timepoints",
-                                                           "OD600_raw_array","OD600_average","OD600_std",
-                                                           "GFP488_raw_array","GFP488_average","GFP488_std",
-                                                           "GFP395_raw_array","GFP395_average","GFP395_std",
-                                                           "GFP/OD600_raw_array","GFP/OD600_average","GFP/OD600_std"]
-                                                            ).astype(object)
-#initialising arrays
-sorted_data_df["OD600_raw_array"] = [[] for _ in range(len(sorted_data_df))]
-sorted_data_df["GFP488_raw_array"] = [[] for _ in range(len(sorted_data_df))]
-sorted_data_df["GFP395_raw_array"] = [[] for _ in range(len(sorted_data_df))]
-sorted_data_df["GFP/OD600_raw_array"] = [[] for _ in range(len(sorted_data_df))]
-
-#reading extracted data file csv
-file_list = {}
-for filepath in filepaths:
-    filename = filepath.split("_")[-1].replace(".csv","")
-    data = pd.read_csv(filepath, header = 0, index_col= 0)
-    
-    #working out the time points
-    timepoints = list(data.columns.values)
-    try:
-        initial_time = datetime.strptime(timepoints[0], "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        initial_time = datetime.strptime(timepoints[0], "%d/%m/%Y %H:%M:%S")
-
-    timepoints_hrs = []
-    for item in timepoints:
-        try:
-            timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            timepoints_datetime = datetime.strptime(item, "%d/%m/%Y %H:%M:%S")
-        time_delta = timepoints_datetime - initial_time
-        timepoints_hrs.append(time_delta.total_seconds() / 3600)
-
-    #renaming file column to the time
-    data = data.rename(columns={old:new for (old,new) in zip(timepoints, timepoints_hrs)})
-    
-    file_list[filename] = data
-
-
-#populate raw data from wells
-for well_coord, value in plate_map.items():
-    sorted_data_df.loc[value[-1],"cells"] = value[0]
-    sorted_data_df.loc[value[-1],"media"] = value[1]
-    sorted_data_df.loc[value[-1],"green_intensity"] = value[2]
-    sorted_data_df.loc[value[-1],"red_intensity"] = value[3]
-    sorted_data_df.loc[value[-1],"OD600_raw_array"].append(np.array(file_list["OD600"].loc[str(well_coord)]))
-    #sorted_data_df.loc[value[-1],"GFP488_raw_array"].append(np.array(file_list["GFP 488nm"].loc[str(well_coord)]))
-    sorted_data_df.loc[value[-1],"GFP395_raw_array"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)]))
-    sorted_data_df.loc[value[-1],"GFP/OD600_raw_array"].append(np.array(file_list["GFP 395nm"].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
-
-
-#calculating time points
-sorted_data_df["timepoints"] = [list(file_list["OD600"].columns.values) for _ in range(len(sorted_data_df))]
-
-#calculating means and std
-for index, row in sorted_data_df.iterrows():
-
-    #mean, std data
-    sorted_data_df.at[index,"OD600_average"] = np.mean(sorted_data_df.loc[index,"OD600_raw_array"], axis = 0)
-    sorted_data_df.at[index,"OD600_std"] = np.std(sorted_data_df.loc[index,"OD600_raw_array"], axis = 0)
-   # sorted_data_df.at[index,"GFP488_average"] = np.mean(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
-   # sorted_data_df.at[index,"GFP488_std"] = np.std(sorted_data_df.loc[index,"GFP488_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP395_average"] = np.mean(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP395_std"] = np.std(sorted_data_df.loc[index,"GFP395_raw_array"], axis = 0)
-
-    sorted_data_df.at[index,"GFP/OD600_average"] = np.mean(sorted_data_df.loc[index,"GFP/OD600_raw_array"], axis = 0)
-    sorted_data_df.at[index,"GFP/OD600_std"] = np.std(sorted_data_df.loc[index,"GFP/OD600_raw_array"], axis = 0)
-
-
-#plotting
 
 #default color and linestyles
 #marker style and color
-markerstyle_map = {"JBL001":"s",      
-                    "JBL137":"o",
+markerstyle_map = {"Double plasmid ctrl":"s",      
+                    "Single plasmid":"o",
                     "media":"^",
 }
 
-markercolor_map = {"JBL001":"black",      
-                    "JBL137":"blue",
+markercolor_map = {"Double plasmid ctrl":"grey",      
+                    "Single plasmid":"blue",
                     "media":"black",
 }
 
 #linestyle 
-linestyle_map = {"WM-met+": "solid",
-                 "WM-met-": "dashed",
+linestyle_map = {"Stationary":"dashed",      
+                    "Refreshed":"solid",
 }
-
-#default line_color is just percentage of green light -> (R,G,B)
-line_color = lambda green_intensity: (1.0 - green_intensity/2.8, green_intensity/2.8, 0)
-line_color_map = {green_intensity : line_color(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])}
-
-#default alpha is also percentage of green light, if used
-line_alpha = lambda green_intensity: green_intensity/2.8
-line_alpha_map = {green_intensity : line_alpha(green_intensity) for green_intensity in set(sorted_data_df["green_intensity"])}
-
-DefaultConfig.line_color_map = line_color_map
-DefaultConfig.line_alpha_map = line_alpha_map
 
 plot_exclude = {
     "cells":[],
@@ -786,16 +820,16 @@ plot_exclude = {
 }
 
 #od600 - average
-line_color_map_override = {"2.8": (0.0,1.0,0.0),
-             "1.4": (0.5,0.5,0.0),
-             "0.56":(0.6,0.4,0.0),
-             "0.28":(0.8,0.2,0.0),
-             "0.028":(0.9,0.1,0.0),
-             "0.0":(1.0,0.0,0.0),
+line_color_map = {"red": (1.0,0.0,0.0),
+             #"1.4": (0.5,0.5,0.0),
+             #"0.56":(0.6,0.4,0.0),
+             "green":(0.0,1.0,0.0),
+             #"0.028":(0.9,0.1,0.0),
+             #"0.0":(1.0,0.0,0.0),
 }
 
 
-alpha_map_override = {"2.8": 1,
+alpha_map = {"2.8": 1,
                  "2.52": 0.95,
                  "2.24": 0.9,
                  "1.96": 0.8,
@@ -807,6 +841,11 @@ alpha_map_override = {"2.8": 1,
                  "0.28":0.2,
                  "0":0.1,
 }
+
+DefaultConfig.markercolor_map = markercolor_map
+DefaultConfig.markerstyle_map = markerstyle_map
+DefaultConfig.line_color_map = line_color_map
+DefaultConfig.linestyle_map = linestyle_map
 
 save_file_path = "26-06-05_kirill_single_plasmid_2"
 
@@ -824,7 +863,28 @@ cell_handles = [
     for cell in markerstyle_map
 ]
 
-sorted_intensities = sorted(
+stationary_handles = [
+    Line2D(
+        [], [], 
+        linestyle = linestyle_map[data],
+        linewidth=2,
+        label = data
+    )
+    for data in linestyle_map
+]
+
+color_handles = [
+    Line2D(
+        [], [], 
+        color=line_color_map[intensity],
+        linewidth=2,
+        label=intensity
+    )
+    for intensity in line_color_map
+]
+
+
+""" sorted_intensities = sorted(
     line_color_map.keys(),
     key=float,
     reverse=True
@@ -838,9 +898,9 @@ intensity_handles = [
         label=intensity
     )
     for intensity in sorted_intensities
-]
+] """
 
-media_handles = [
+""" media_handles = [
     Line2D(
         [], [],
         color = "black",
@@ -849,7 +909,7 @@ media_handles = [
         label = media
     )
     for media in linestyle_map
-]
+] """
 
 
 
@@ -859,20 +919,7 @@ media_handles = [
 
 
 
-DefaultConfig.save_file_path = "26-06-05_kirill_single_plasmid_2"
-
-_title_extra = ""
-_save_image = False
-
-plot_timecourse(sorted_data_df, "OD600", "average", title_extra= _title_extra, save_image = _save_image)
-plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= _title_extra, save_image = _save_image)
-plot_timecourse(sorted_data_df, "GFP/OD600", "average", title_extra= _title_extra, save_image = _save_image)
-plot_timecourse(sorted_data_df, "GFP488", "average", title_extra= _title_extra, save_image = _save_image)
-plot_timecourse(sorted_data_df, "OD600", "all", title_extra= _title_extra, save_image = _save_image)
-plot_timecourse(sorted_data_df, "GFP395", "all", title_extra= _title_extra, save_image = _save_image)
-plot_timecourse(sorted_data_df, "GFP/OD600", "all", title_extra= _title_extra, save_image = _save_image)
-plot_timecourse(sorted_data_df, "GFP488", "all", title_extra= _title_extra, save_image = _save_image)
-
+DefaultConfig.save_file_path = save_file_path
 plot_exclude = {
     "cells":[],
     "media":[],
@@ -882,11 +929,11 @@ plot_exclude = {
 }
 DefaultConfig.plot_exclude = plot_exclude
 
-
-plot_timecourse_custom(sorted_data_df, "OD600", "both", title_extra= "", save_image = False,
-                       row_filter=lambda row: ((row["cells"] == "JBL001" and row["green_intensity"] in [0.0])
-                                               or (row["cells"] == "media")
-                                               or (row["cells"] == "JBL137" and row["green_intensity"] in [0.28, 0.0])))
+plot_timecourse_custom(sorted_data_df, "GFP 395nm", "average", title_extra= "", save_image = False,
+                       #row_filter=lambda row: ((row["cells"] == "JBL001" and row["green_intensity"] in [0.0])
+                       #                        or (row["cells"] == "media")
+                       #                        or (row["cells"] == "JBL137" and row["green_intensity"] in [0.028, 0.0]))
+                                               )
 
 
 """
