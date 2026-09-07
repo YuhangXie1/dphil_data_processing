@@ -82,11 +82,16 @@ all_plate_table_df = {}
 plate_reader = {"downstairs":0, "upstairs":1}
 chosen_plate_reader = 0
 
-data_folder = "26-07-23_optowell_test2"
+data_folder = "26-09-03 Kirill 3"
+save_filename_extra = "diya"
 data_files = ["t0.xlsx",
-             "t5.xlsx",
+             "t3.xlsx",
+             "t6.xlsx",
+             "t9.xlsx",
              "t12.xlsx",
+             "t15.xlsx",
              "t24.xlsx",
+             "t27.xlsx",
              ]
 
 save_filename_starter = data_folder
@@ -104,4 +109,4 @@ for filepath in data_files:
 for key, table in all_plate_table_df.items():
     #deleting first column which is place holder. Note does not update the tables in all_plate_table_df
     new_table = table.drop(columns = "0")
-    new_table.to_csv(f"{data_folder}/{save_filename_starter}_extracted_{key}.csv")
+    new_table.to_csv(f"{data_folder}/{save_filename_starter}_{save_filename_extra}_extracted_{key}.csv")
