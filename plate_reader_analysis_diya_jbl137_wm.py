@@ -17,7 +17,7 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 
-#classes
+#Defining default config
 @dataclass
 class PlotConfig:
     markerstyle_map: Dict[str,str]
@@ -35,7 +35,6 @@ class PlotConfig:
     default_linecolor: str = "black"
     default_linealpha: float = 1.0
 
-# Functions
 def default_plot_config(save_file_path: str = ".") -> PlotConfig:
     return PlotConfig(
         markerstyle_map = {"JBL001":"s", "JBL137":"o", "YX001":"o", "media":"^"},
@@ -48,6 +47,8 @@ def default_plot_config(save_file_path: str = ".") -> PlotConfig:
         save_file_path = save_file_path
     )
 DefaultConfig = default_plot_config()
+
+### FUNCTIONS ###
 
 def mean_std_cv(data):
     #data should be array containing 1 or more arrays
@@ -665,65 +666,73 @@ for row in range(0,len(red_array)):
 for key, item in plate_map.items():
     plate_map[key].append("_".join(map(str, item)))
 
-def load_data(filepaths):
+def load_data(filepath):
     
     #initialises columns of dataframe
-    indexes = sorted(set([value[-1] for value in plate_map.values()]))
-    columns = ["cells", #str
-               "media", #str
-               "green_intensity", #float
-               "red_intensity", #float
-               #data
+    columns = [
+                "cells", #str e.g. YX001
+                "media", #str e.g. WM-met+
+                "green_intensity", #float e.g. 2.8
+                "red_intensity", #float e.g. 2.8
+                "time", #float in hours
+                "measurement", #str e.g. OD600, GFP 395nm
+                "value", #float
                ]
+    sorted_data_df = pd.DataFrame(columns=columns).astype(object)
 
-    for path in filepaths:
-        name = path.split("_")[-1].replace(".csv","")
-        columns.append(name + "_timepoints")
-        columns.append(name + "_raw")
-        columns.append(name + "_average")
-        columns.append(name + "_std")
-        if name != "OD600":
-            columns.append(name + "/OD600_timepoints")
-            columns.append(name + "/OD600_raw")
-            columns.append(name + "/OD600_average")
-            columns.append(name + "/OD600_std")   
+    #Loading data
+    data = pd.read_csv(filepath, header = [0,1], index_col= 0)
+   
+    #Rebuild the MultiIndex with proper Timestamp objects
+    timestamps = pd.to_datetime(data.columns.get_level_values("timestamp"))
+    measurements = data.columns.get_level_values("measurement")
+    data.columns = pd.MultiIndex.from_arrays([measurements, timestamps], names=["measurement", "timestamp"])
 
-    sorted_data_df = pd.DataFrame(0.0, index=indexes, columns=columns).astype(object)
-
-    #initialising arrays for raw data
-    for column in sorted_data_df.columns:
-        if column.split("_")[-1] == "raw":
-            sorted_data_df[column] = [[] for _ in range(len(sorted_data_df))]
+    print(data)
 
     #Populating the DF
-    #reading extracted data file csv
+    for well in data.index:
+        
+        #Plate settings
+        cells = plate_map[well][0]
+        media = plate_map[well][1]
+        green_intensity = plate_map[well][2]
+        red_intensity = plate_map[well][3]
+
+        #Populate for each mode and timestamp
+        for measurement, timestamp in data.columns:
+            timestamps = data[measurement].columns
+            initial_time = timestamps.min()
+            time = (timestamp - initial_time).total_seconds() /3600
+
+
     file_list = {}
-    channel_list = []
-    for filepath in filepaths:
-        filename = filepath.split("_")[-1].replace(".csv","")
-        channel_list.append(filename)
-        data = pd.read_csv(filepath, header = 0, index_col= 0)
-        
-        #working out the time points
-        timepoints = list(data.columns.values)
+    measurements = []
+    #for filepath in filepaths:
+    filename = filepath.split("_")[-1].replace(".csv","")
+    measurements.append(filename)
+    
+    
+    #working out the time points
+    timepoints = list(data.columns.values)
+    try:
+        initial_time = datetime.strptime(timepoints[0], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        initial_time = datetime.strptime(timepoints[0], "%d/%m/%Y %H:%M:%S")
+
+    timepoints_hrs = []
+    for item in timepoints:
         try:
-            initial_time = datetime.strptime(timepoints[0], "%Y-%m-%d %H:%M:%S")
+            timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
         except ValueError:
-            initial_time = datetime.strptime(timepoints[0], "%d/%m/%Y %H:%M:%S")
+            timepoints_datetime = datetime.strptime(item, "%d/%m/%Y %H:%M:%S")
+        time_delta = timepoints_datetime - initial_time
+        timepoints_hrs.append(time_delta.total_seconds() / 3600)
 
-        timepoints_hrs = []
-        for item in timepoints:
-            try:
-                timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                timepoints_datetime = datetime.strptime(item, "%d/%m/%Y %H:%M:%S")
-            time_delta = timepoints_datetime - initial_time
-            timepoints_hrs.append(time_delta.total_seconds() / 3600)
-
-        #renaming file column to the time
-        data = data.rename(columns={old:new for (old,new) in zip(timepoints, timepoints_hrs)})
-        
-        file_list[filename] = data
+    #renaming file column to the time
+    data = data.rename(columns={old:new for (old,new) in zip(timepoints, timepoints_hrs)})
+    
+    file_list[filename] = data
 
 
     #populate raw data from wells
@@ -734,16 +743,16 @@ def load_data(filepaths):
         sorted_data_df.loc[value[-1],"red_intensity"] = value[3]
         
 
-        for channel in channel_list:
-            sorted_data_df.loc[value[-1], channel + "_raw"].append(np.array(file_list[channel].loc[str(well_coord)]))
-            sorted_data_df.at[value[-1], channel + "_timepoints"] = file_list[channel].columns.values
+        for channel in measurements:
+            sorted_data_df.loc[value[-1], channel].append(np.array(file_list[channel].loc[str(well_coord)]))
+            sorted_data_df.at[value[-1], "time"] = file_list[channel].columns.values
             if channel != "OD600":
-                sorted_data_df.loc[value[-1], channel + "/OD600_raw"].append(np.array(file_list[channel].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
-                sorted_data_df.at[value[-1], channel + "/OD600_timepoints"] = file_list[channel].columns.values
+                sorted_data_df.loc[value[-1], channel + "/OD600"].append(np.array(file_list[channel].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
+
 
     #calculating means and std
     for index, row in sorted_data_df.iterrows():
-        for channel in channel_list:
+        for channel in measurements:
             #mean, std data
             sorted_data_df.at[index, channel + "_average"] = np.mean(sorted_data_df.loc[index, channel + "_raw"], axis = 0)
             sorted_data_df.at[index, channel + "_std"] = np.std(sorted_data_df.loc[index, channel + "_raw"], axis = 0)
@@ -757,15 +766,20 @@ def load_data(filepaths):
     return sorted_data_df
 
 
+    """
+    measurements = []
+    for path in filepaths:
+        name = path.split("_")[-1].replace(".csv","")
+        if name != "OD600":
+            measurements.append(name + "/OD600")
+    """
 
 
+#Use the extracted_combined file from plate_reader_extraction script to get the right format
+filepath = "26-09-03 Kirill 3/26-09-03 Kirill 3_diya_extracted_combined.csv"
 
 
-filepaths = ["26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_GFP 395nm.csv",
-             "26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_GFP 480nm.csv", 
-             "26-07-22_optowell_test1/26-07-22_optowell_test1_extracted_OD600.csv"]
-
-sorted_data_df = load_data(filepaths)
+sorted_data_df = load_data(filepath)
 
 
 
