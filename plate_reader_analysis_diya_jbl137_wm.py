@@ -674,6 +674,7 @@ def load_data(filepath):
                 "media", #str e.g. WM-met+
                 "green_intensity", #float e.g. 2.8
                 "red_intensity", #float e.g. 2.8
+                "timestamp", #datetime
                 "time", #float in hours
                 "measurement", #str e.g. OD600, GFP 395nm
                 "value", #float
@@ -704,7 +705,7 @@ def load_data(filepath):
             timestamps = data[measurement].columns
             initial_time = timestamps.min()
             time = (timestamp - initial_time).total_seconds() /3600
-
+            
 
     file_list = {}
     measurements = []
