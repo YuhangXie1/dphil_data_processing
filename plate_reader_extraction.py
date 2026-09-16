@@ -92,7 +92,7 @@ all_plate_table_df = {}
 
 chosen_plate_reader = "downstairs" #choose "downstairs" or "upstairs"
 
-data_folder = "26-09-03 Kirill 3" #path to where to find the data
+data_folder = "26-09-10 YX002 test 1" #path to where to find the data
 save_filename_extra = "diya" #additional text in the saved filename
 #all of the files to parse
 data_files = ["t0.xlsx", 
@@ -100,9 +100,7 @@ data_files = ["t0.xlsx",
              "t6.xlsx",
              "t9.xlsx",
              "t12.xlsx",
-             "t15.xlsx",
              "t24.xlsx",
-             "t27.xlsx",
              ]
 
 ##############

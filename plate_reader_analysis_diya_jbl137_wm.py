@@ -37,8 +37,8 @@ class PlotConfig:
 
 def default_plot_config(save_file_path: str = ".") -> PlotConfig:
     return PlotConfig(
-        markerstyle_map = {"JBL001":"s", "JBL137":"o", "YX001":"o", "media":"^"},
-        markercolor_map = {"JBL001":"black", "JBL137":"blue", "YX001": "blue", "media":"black"},
+        markerstyle_map = {"JBL001":"s", "YX002":"o", "YX001":"o", "media":"^"},
+        markercolor_map = {"JBL001":"black", "YX002":"blue", "YX001": "blue", "media":"black"},
         linestyle_map = {"WM-met+": "solid", "WM-met-": "dashed", "LB": "solid"},
         line_color_map = {},  # build from data later
         line_alpha_map = {},
@@ -101,15 +101,16 @@ def build_intensity_colour_map(green_intensities, cmap_name = None) -> Dict[Any,
             for intensity in green_intensities_set
         }
 
-def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
+def plot_timecourse(raw_dataframe, summary_dataframe, measurement, plot_type, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
                             xlabel = "Time (hrs)",
                             config: PlotConfig = DefaultConfig, save_image = False,
                            ):
     """
     Plots y_data over time
     
-    :param dataframe: dataframe where the data is
-    :param y_data: data to plot
+    :param dataframe: dataframe where the data is (raw)
+    :param summary_dataframe: dataframe where the average, std, count data is
+    :param measurement: data type to plot (e.g. OD600 or GFP 395nm)
     :param plot_type: select whether 'average' are plotted or 'all' data
     :param ylabel: optional override for the ylabel text
     :type ylabel: str | None
@@ -124,7 +125,7 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
     """
 
     if ylabel is None:
-        ylabel = y_data
+        ylabel = measurement
 
     if title is None:
         title = f"{ylabel} - {plot_type} - {title_extra}"
@@ -132,12 +133,55 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
         title = title + " - " + title_extra
 
 
+
+
+    #slicing data
+    
+    if plot_type == "average":
+        dataframe = summary_dataframe
+    elif plot_type == "all":
+        dataframe = raw_dataframe
+
+    data = dataframe.loc[dataframe["measurement"] == measurement].copy() 
+
+
     fig, axs = plt.subplots()
-    for row_index, row in dataframe.iterrows():
-        index_name_cells = row["cells"]
-        index_name_media = row["media"]
-        index_name_green_intensity = row["green_intensity"]
-        index_name_red_intensity = row["red_intensity"]
+
+    if plot_type == "average":
+        for (cells, media, green_intensity, red_intensity), group in data.groupby(["cells","media","green_intensity","red_intensity"]):
+            axs.errorbar(group["time"], group["mean"],
+                        yerr = group["std"], capsize = 2.0,
+
+                        color = config.line_color_map[green_intensity],
+                        marker = config.markerstyle_map[cells],
+                        markerfacecolor = config.markercolor_map[cells],
+                        markeredgecolor = config.markercolor_map[cells], markersize = 3.0,
+                        linestyle = config.linestyle_map[media], linewidth = 1.0,
+                        #alpha = alpha,
+                        )
+
+        
+        """     for row_index, row in data.iterrows():
+        cells = row["cells"]
+        media = row["media"]
+        green_intensity = row["green_intensity"]
+        red_intensity = row["red_intensity"]
+        timestamp = row["timestamp"]
+        timepoint = row[""] """
+
+
+        """         rows.append({
+                        "well": well,
+                        "cells": cells,
+                        "media": media,
+                        "green_intensity": green_intensity,
+                        "red_intensity": red_intensity,
+                        "timestamp": timestamp,
+                        "timepoint": timepoint,
+                        "time" : time,
+                        "measurement": measurement,
+                        "value": value,
+                    })
 
         if (index_name_cells in config.plot_exclude["cells"]
             or index_name_media in config.plot_exclude["media"]
@@ -192,7 +236,7 @@ def plot_timecourse(dataframe, y_data, plot_type, ylabel: str | None = None, tit
                             #color = config.line_color_map[index_name_green_intensity],
                             linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
                             alpha = 0.2,
-                            )
+                            ) """
                             
 
     leg1 = axs.legend(
@@ -561,37 +605,37 @@ DEFAULT_OPTICAL_POWER = np.array([
     # Channel 1 – Green light (checkerboard starting green at B2)
     np.array([
         # Columns 1–12 (A–L), Rows A–H
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row A
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row B
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row C
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row D
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row E
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row F
-        [1,	1,  1,    1,	1,   1,    0,	0,   0,   	0,	0,   0],  # Row G
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row H
+        [2.8,	0.56,   1.4,    2.8,	0.56,   1.4,    2.8,	0.56,   1.4,   	2.8,	0.56,   1.4,],  # Row A
+        [0.0,  	0.28,  	0.28,  	0.0,  	0.28,  	0.28,	0.0,  	0.28,  	0.28,	0.0,  	0.28,  	0.28,],  # Row B
+        [2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,],  # Row C
+        [0.028,	0.028,  2.8,    0.028,	0.028,  2.8,    0.028,	0.028,  2.8,   	0.028,	0.028,  2.8,],  # Row D
+        [1.4,  	2.8,  	0.0,  	1.4,  	2.8,  	0.0, 	1.4,  	2.8,  	0.0,    1.4,  	2.8,  	0.0,],  # Row E
+        [0.28,	0.0,    2.8,    0.28,	0.0,    2.8,  	0.28,	0.0,    2.8,  	0.28,	0.0,    2.8,],  # Row F
+        [0.56,	2.8,    0.028,  0.56,	2.8,    0.028, 	0.56,	2.8,    0.028,  0.56,	2.8,    0.028,],  # Row Gh
+        [2.8,	2.8,    0.0,    0.0,    2.8,    2.8,    0.0,    0.0,    2.8,    0.0,    0.0,    2.8],  # Row H
     ]),
 	# Channel 2 (Color 2 or 6). Yellow-Green or White on v0.4c
 	[[0 / (2**row) for col in range(NCOLS)] for row in range(NROWS)],    
 
     # Channel 3 – Red light (opposite checkerboard cells)
     np.array([
-        # Columns 1–12 (A–L), Rows A–H
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row A
-        [0,	0,  0,    0,	0,   0,    1,	1,   1,   	1,	1,   1],  # Row B
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row C
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row D
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row E
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row F
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row G
-        [0,	0,  0,    0,	0,   0,    0,	0,   0,   	0,	0,   0],  # Row H
-    ]),
+        [0.0,	2.8,	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,    2.8],  # Row A
+        [2.8,   2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,   	2.8,    2.8,    2.8],  # Row B
+        [2.8,   2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,   	2.8,    2.8,    2.8],  # Row C
+        [2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,    0.0],  # Row D
+        [2.8,   2.8,    2.8,    2.8,   	2.8,    2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row E
+        [2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8, 	2.8,    2.8,    2.8,    2.8,    2.8,    2.8],  # Row F
+        [2.8,   0.0,    2.8,    2.8,    0.0,    2.8,    2.8,   	0.0,   	2.8,    2.8,    0.0,    2.8],  # Row G
+        [0.0,   0.0,    2.8,   	2.8, 	0.0,  	0.0, 	2.8,  	2.8,  	0.0,  	2.8,  	2.8,   	0.0],  # Row H
+    ])
 ])
 
 #plate map for cell type
 class Cells(Enum):
     media = 0
     JBL001 = 1
-    JBL137 = 2
+    YX001 = 2
+    YX002 = 3
 
 class Rows(Enum):
     A = 0
@@ -612,26 +656,26 @@ medium = {
 
 cell_map = np.array([
         #1      2       3       4       5       6       7       8       9       10      11      12
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row A
-        [0,	    0,	    0,  	0,  	0,  	0,  	2,  	2,  	2,  	2,  	2,      2],  # Row B
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row C
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row D
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row E
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row F
-        [2,	    2,	    2,  	2,  	2,  	2,  	0,  	0,  	0,  	0,  	0,      0],  # Row G
-        [0,	    0,	    0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,  	0,      0],  # Row H
+        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row A
+        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row B
+        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row C
+        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row D
+        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row E
+        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row F
+        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row G
+        [1,	    1,	    1,  	1,  	1,  	1,  	1,  	1,  	0,  	0,  	0,      0],  # Row H
 ])
 
 media_map = np.array([
         #1      2       3       4       5       6       7       8       9       10      11      12
-        [2,	    2,	    2,  	1,  	1,  	1,  	2,  	2,  	2,  	1,  	1,      1],  # Row A
-        [2,	    2,	    2,  	1,  	1,  	1,  	2,  	2,  	2,  	1,  	1,      1],  # Row B
-        [2,	    2,	    2,  	1,  	1,  	1,  	2,  	2,  	2,  	1,  	1,      1],  # Row C
-        [2,	    2,	    2,  	1,  	1,  	1,  	2,  	2,  	2,  	1,  	1,      1],  # Row D
-        [2,	    2,	    2,  	1,  	1,  	1,  	2,  	2,  	2,  	1,  	1,      1],  # Row E
-        [2,	    2,	    2,  	1,  	1,  	1,  	2,  	2,  	2,  	1,  	1,      1],  # Row F
-        [2,	    2,	    2,  	1,  	1,  	1,  	2,  	2,  	2,  	1,  	1,      1],  # Row G
-        [2,	    2,	    2,  	1,  	1,  	1,  	2,  	2,  	2,  	1,  	1,      1],  # Row H
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row A
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row B
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row C
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row D
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row E
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row F
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row G
+        [1,	    1,	    1,  	1,  	2,  	2,  	2,  	2,  	1,  	2,  	1,      2],  # Row H
 ])
 
 #turn light array into labels - need to code
@@ -675,6 +719,7 @@ def load_data(filepath):
                 "green_intensity", #float e.g. 2.8
                 "red_intensity", #float e.g. 2.8
                 "timestamp", #datetime
+                "timepoint", #int, e.g. 1,2. Count of number of times data is collected
                 "time", #float in hours
                 "measurement", #str e.g. OD600, GFP 395nm
                 "value", #float
@@ -688,8 +733,7 @@ def load_data(filepath):
     timestamps = pd.to_datetime(data.columns.get_level_values("timestamp"))
     measurements = data.columns.get_level_values("measurement")
     data.columns = pd.MultiIndex.from_arrays([measurements, timestamps], names=["measurement", "timestamp"])
-
-    print(data)
+    rows = []
 
     #Populating the DF
     for well in data.index:
@@ -703,85 +747,75 @@ def load_data(filepath):
         #Populate for each mode and timestamp
         for measurement, timestamp in data.columns:
             timestamps = data[measurement].columns
+            timepoint = timestamps.get_loc(timestamp)
             initial_time = timestamps.min()
             time = (timestamp - initial_time).total_seconds() /3600
-            
+            value = data.loc[well, (measurement, timestamp)]
+            rows.append({
+                "well": well,
+                "cells": cells,
+                "media": media,
+                "green_intensity": green_intensity,
+                "red_intensity": red_intensity,
+                "timestamp": timestamp,
+                "timepoint": timepoint,
+                "time" : time,
+                "measurement": measurement,
+                "value": value,
+            })
 
-    file_list = {}
-    measurements = []
-    #for filepath in filepaths:
-    filename = filepath.split("_")[-1].replace(".csv","")
-    measurements.append(filename)
-    
-    
-    #working out the time points
-    timepoints = list(data.columns.values)
-    try:
-        initial_time = datetime.strptime(timepoints[0], "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        initial_time = datetime.strptime(timepoints[0], "%d/%m/%Y %H:%M:%S")
+    sorted_data_df = pd.DataFrame(rows)
 
-    timepoints_hrs = []
-    for item in timepoints:
-        try:
-            timepoints_datetime = datetime.strptime(item, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            timepoints_datetime = datetime.strptime(item, "%d/%m/%Y %H:%M:%S")
-        time_delta = timepoints_datetime - initial_time
-        timepoints_hrs.append(time_delta.total_seconds() / 3600)
+    #Calculating signal div OD600
+    select_od_data = sorted_data_df.loc[sorted_data_df["measurement"] == "OD600"].copy()
+    new_rows = []
+    for measurement in sorted_data_df["measurement"].unique():
+        if measurement == "OD600":
+            continue
+        else:
+            select_measurement_data = sorted_data_df.loc[sorted_data_df["measurement"] == measurement].copy()
+            calculated_measurement = f"{measurement}/OD600"
+            for index, measure_row in select_measurement_data.iterrows():
+                well = measure_row["well"]
+                timepoint = measure_row["timepoint"]
 
-    #renaming file column to the time
-    data = data.rename(columns={old:new for (old,new) in zip(timepoints, timepoints_hrs)})
-    
-    file_list[filename] = data
+                #finding corresponding OD row
+                od_row = select_od_data[(select_od_data["well"] == well) & (select_od_data["timepoint"] == timepoint)]
+                od_value = od_row["value"].iloc[0]
 
+                #calculating ratio
+                measure_value = measure_row["value"]
+                ratio = measure_value / od_value
 
-    #populate raw data from wells
-    for well_coord, value in plate_map.items():
-        sorted_data_df.loc[value[-1],"cells"] = value[0]
-        sorted_data_df.loc[value[-1],"media"] = value[1]
-        sorted_data_df.loc[value[-1],"green_intensity"] = value[2]
-        sorted_data_df.loc[value[-1],"red_intensity"] = value[3]
-        
+                #writing new data row
+                new_row = measure_row.copy()
+                new_row["measurement"] = calculated_measurement
+                new_row["value"] = ratio
+                new_rows.append(new_row)
 
-        for channel in measurements:
-            sorted_data_df.loc[value[-1], channel].append(np.array(file_list[channel].loc[str(well_coord)]))
-            sorted_data_df.at[value[-1], "time"] = file_list[channel].columns.values
-            if channel != "OD600":
-                sorted_data_df.loc[value[-1], channel + "/OD600"].append(np.array(file_list[channel].loc[str(well_coord)])/np.array(file_list["OD600"].loc[str(well_coord)]))
+    calculated_data_df = pd.DataFrame(new_rows)
+    sorted_data_df = pd.concat([sorted_data_df, calculated_data_df], ignore_index= True)
 
-
-    #calculating means and std
-    for index, row in sorted_data_df.iterrows():
-        for channel in measurements:
-            #mean, std data
-            sorted_data_df.at[index, channel + "_average"] = np.mean(sorted_data_df.loc[index, channel + "_raw"], axis = 0)
-            sorted_data_df.at[index, channel + "_std"] = np.std(sorted_data_df.loc[index, channel + "_raw"], axis = 0)
-            if channel != "OD600":
-                sorted_data_df.at[index, channel + "/OD600_average"] = np.mean(sorted_data_df.loc[index,channel + "/OD600_raw"], axis = 0)
-                sorted_data_df.at[index, channel + "/OD600_std"] = np.std(sorted_data_df.loc[index, channel + "/OD600_raw"], axis = 0)
+    #finding means and averages
+    summary_df = sorted_data_df.groupby(["cells","media","green_intensity","red_intensity","timestamp","time","timepoint","measurement"], as_index=False).agg(
+        min_timestamp = ("timestamp", "min"),
+        mean = ("value","mean"),
+        std = ("value","std"),
+        count = ("value","count")
+    )
 
     # Generating color map
     DefaultConfig.line_color_map = build_intensity_colour_map(sorted_data_df["green_intensity"].unique())
 
-    return sorted_data_df
+    return sorted_data_df, summary_df
 
-
-    """
-    measurements = []
-    for path in filepaths:
-        name = path.split("_")[-1].replace(".csv","")
-        if name != "OD600":
-            measurements.append(name + "/OD600")
-    """
 
 
 #Use the extracted_combined file from plate_reader_extraction script to get the right format
-filepath = "26-09-03 Kirill 3/26-09-03 Kirill 3_diya_extracted_combined.csv"
+filepath = "26-09-10 YX002 test 1/26-09-10 YX002 test 1_diya_extracted_combined.csv"
 
 
-sorted_data_df = load_data(filepath)
-
+sorted_data_df, summary_df = load_data(filepath)
 
 
 # Color and style map
@@ -799,12 +833,14 @@ style_map = {
 #default color and linestyles
 #marker style and color
 markerstyle_map = {"JBL001":"s",      
-                    "JBL137":"o",
+                    "YX001":"o",
+                    "YX002":"s",
                     "media":"^",
 }
 
 markercolor_map = {"JBL001":"black",      
-                    "JBL137":"blue",
+                    "YX001":"blue",
+                    "YX002":"blue",
                     "media":"black",
 }
 
@@ -903,8 +939,8 @@ plot_exclude = {
     "red_intensity":[],
 }
 DefaultConfig.plot_exclude = plot_exclude
-plot_timecourse(sorted_data_df, "OD600", "all", title_extra= " ", save_image = False)
-plot_timecourse(sorted_data_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
+plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= " ", save_image = False)
+#plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
 """
 plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
 plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= "film on", save_image = False)
