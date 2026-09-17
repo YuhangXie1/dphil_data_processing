@@ -37,8 +37,8 @@ class PlotConfig:
 
 def default_plot_config(save_file_path: str = ".") -> PlotConfig:
     return PlotConfig(
-        markerstyle_map = {"JBL001":"s", "YX002":"o", "YX001":"o", "media":"^"},
-        markercolor_map = {"JBL001":"black", "YX002":"blue", "YX001": "blue", "media":"black"},
+        markerstyle_map = {"JBL001":"s", "YX002":"*", "YX001":"o", "media":"^"},
+        markercolor_map = {"JBL001":"black", "YX002":"orange", "YX001": "blue", "media":"black"},
         linestyle_map = {"WM-met+": "solid", "WM-met-": "dashed", "LB": "solid"},
         line_color_map = {},  # build from data later
         line_alpha_map = {},
@@ -132,23 +132,49 @@ def plot_timecourse(raw_dataframe, summary_dataframe, measurement, plot_type, yl
     else:
         title = title + " - " + title_extra
 
-
-
-
     #slicing data
+    summary_data = summary_dataframe.loc[summary_dataframe["measurement"] == measurement].copy() 
+    raw_data = raw_dataframe.loc[raw_dataframe["measurement"] == measurement].copy() 
     
-    if plot_type == "average":
-        dataframe = summary_dataframe
-    elif plot_type == "all":
-        dataframe = raw_dataframe
-
-    data = dataframe.loc[dataframe["measurement"] == measurement].copy() 
-
 
     fig, axs = plt.subplots()
+    if plot_type == "all" or plot_type == "both":
+        if plot_type == "both":
+            select_alpha = 0.2
+        else:
+            select_alpha = 1.0
 
-    if plot_type == "average":
-        for (cells, media, green_intensity, red_intensity), group in data.groupby(["cells","media","green_intensity","red_intensity"]):
+        for well, group in raw_data.groupby(["well"]):
+            row = group.iloc[0]
+            cells = row["cells"]
+            media = row["media"]
+            green_intensity = row["green_intensity"]
+            red_intensity = row["red_intensity"]
+
+            if (cells in config.plot_exclude["cells"]
+                        or media in config.plot_exclude["media"]
+                        or green_intensity in config.plot_exclude["green_intensity"]
+                        or red_intensity in config.plot_exclude["red_intensity"]):
+                    continue
+            
+            axs.plot(group["time"], group["value"],
+
+                        color = config.line_color_map[green_intensity],
+                        marker = config.markerstyle_map[cells],
+                        markerfacecolor = config.markercolor_map[cells],
+                        markeredgecolor = config.markercolor_map[cells], markersize = 3.0,
+                        linestyle = config.linestyle_map[media], linewidth = 1.0,
+                        alpha = select_alpha,
+                        )  
+
+    if plot_type == "average" or plot_type == "both":
+        for (cells, media, green_intensity, red_intensity), group in summary_data.groupby(["cells","media","green_intensity","red_intensity"]):
+            if (cells in config.plot_exclude["cells"]
+                        or media in config.plot_exclude["media"]
+                        or green_intensity in config.plot_exclude["green_intensity"]
+                        or red_intensity in config.plot_exclude["red_intensity"]):
+                    continue
+
             axs.errorbar(group["time"], group["mean"],
                         yerr = group["std"], capsize = 2.0,
 
@@ -157,88 +183,9 @@ def plot_timecourse(raw_dataframe, summary_dataframe, measurement, plot_type, yl
                         markerfacecolor = config.markercolor_map[cells],
                         markeredgecolor = config.markercolor_map[cells], markersize = 3.0,
                         linestyle = config.linestyle_map[media], linewidth = 1.0,
-                        #alpha = alpha,
-                        )
-
-        
-        """     for row_index, row in data.iterrows():
-        cells = row["cells"]
-        media = row["media"]
-        green_intensity = row["green_intensity"]
-        red_intensity = row["red_intensity"]
-        timestamp = row["timestamp"]
-        timepoint = row[""] """
-
-
-        """         rows.append({
-                        "well": well,
-                        "cells": cells,
-                        "media": media,
-                        "green_intensity": green_intensity,
-                        "red_intensity": red_intensity,
-                        "timestamp": timestamp,
-                        "timepoint": timepoint,
-                        "time" : time,
-                        "measurement": measurement,
-                        "value": value,
-                    })
-
-        if (index_name_cells in config.plot_exclude["cells"]
-            or index_name_media in config.plot_exclude["media"]
-            or index_name_green_intensity in config.plot_exclude["green_intensity"]
-            or index_name_red_intensity in config.plot_exclude["red_intensity"]):
-            continue
-
-        if config.alpha_used is True:
-            alpha = config.line_alpha_map[index_name_green_intensity]
-        else:
-            alpha = 1
-
-        if plot_type == "average":
-            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
-                        yerr = row[f"{y_data}_std"], capsize = 2.0,
-
-                        color = config.line_color_map[index_name_green_intensity],
-                        marker = config.markerstyle_map[index_name_cells],
-                        markerfacecolor = config.markercolor_map[index_name_cells],
-                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
-                        alpha = alpha,
-                        )
-            
-        elif plot_type == "all":
-            for repeat in row[f"{y_data}_raw"]:
-                axs.plot(row[f"{y_data}_timepoints"], repeat,
-                        
-                            color = config.line_color_map[index_name_green_intensity],
-                            marker = config.markerstyle_map[index_name_cells],
-                            markerfacecolor = config.markercolor_map[index_name_cells],
-                            markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                            linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
-                            alpha = alpha,
-                            )
-        
-        elif plot_type == "both":
-            axs.errorbar(row[f"{y_data}_timepoints"], row[f"{y_data}_average"],
-                        yerr = row[f"{y_data}_std"], capsize = 2.0,
-
-                        #color = config.line_color_map[index_name_green_intensity],
-                        marker = config.markerstyle_map[index_name_cells],
-                        markerfacecolor = config.markercolor_map[index_name_cells],
-                        markeredgecolor = config.markercolor_map[index_name_cells], markersize = 3.0,
-                        linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
                         alpha = 1.0,
                         )
-            
-            for repeat in row[f"{y_data}_raw"]:
-                axs.plot(row[f"{y_data}_timepoints"], repeat,
-                        
-                            #color = config.line_color_map[index_name_green_intensity],
-                            linestyle = config.linestyle_map[index_name_media], linewidth = 1.0,
-                            alpha = 0.2,
-                            ) """
                             
-
     leg1 = axs.legend(
         handles=cell_handles,
         title="Cell type",
@@ -285,17 +232,18 @@ def plot_timecourse(raw_dataframe, summary_dataframe, measurement, plot_type, yl
 
 
 
-def plot_by_intensity(dataframe, y_data, plot_type, data_timearray_loc, ylabel: str | None = None, title: str | None = None,
+def plot_by_intensity(raw_dataframe, summary_dataframe, measurement, plot_type, timepoints: int | list[int], ylabel: str | None = None, title: str | None = None,
                               title_extra: str = "",
                               xlabel = "Green light intensity %",
                                 config: PlotConfig = DefaultConfig, save_image = False):
     """
     Plots y_data over intensity at a chosen time point
     
-    :param dataframe: dataframe where the data is
-    :param y_data: data to plot
+    :param raw_dataframe: dataframe where the raw data is
+    :param summary_dataframe: dataframe where the summary data is
+    :param measurement: the measurement to plot (e.g. OD600 or GFP 395nm)
     :param plot_type: select whether 'average' are plotted or 'all' data
-    :param data_timearray_loc: chosen time point by index
+    :param timepoint: chosen time point (number of reading, e.g. 0 = first reading, 1 = second reading, etc.) or series of timepoints
     :param ylabel: optional override for the ylabel text
     :type ylabel: str | None
     :param title: optional override for title text
@@ -308,90 +256,116 @@ def plot_by_intensity(dataframe, y_data, plot_type, data_timearray_loc, ylabel: 
     :param save_image: if True, then image is saved instead of displayed
     """
     if ylabel is None:
-        ylabel = y_data
+        ylabel = measurement
 
     if title is None:
         title = f"{ylabel} - by intensity - {plot_type} - {title_extra}"
     else:
         title = title + " - " + title_extra
 
-    by_intensity_df = dataframe[["cells","media","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std", f"{y_data}_raw_array"]].copy()
-    by_intensity_df[f"{y_data}_average"] = by_intensity_df[f"{y_data}_average"].apply(lambda x: x[data_timearray_loc])
-    by_intensity_df[f"{y_data}_std"] = by_intensity_df[f"{y_data}_std"].apply(lambda x: x[data_timearray_loc])
-    by_intensity_df[f"{y_data}_raw_array"] = by_intensity_df[f"{y_data}_raw_array"].apply(lambda x: [array[data_timearray_loc] for array in x])
-    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
-
-    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+    if isinstance(timepoints, int): #single timepoint allows gradient colours to be used
+        timepoints = [timepoints]
+        colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+        cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+        timepoints_is_array = False
+    else:
+        cmap = plt.get_cmap("viridis")  # Use a different colormap for multiple timepoints
+        timepoints_is_array = True
+        #TODO - implement different line colours for multiple timepoints
 
     fig, axs = plt.subplots()
-    for celltype in set(by_intensity_df["cells"]):
-        if celltype in config.plot_exclude["cells"]:
-            continue
-        data_select_by_cell = by_intensity_df.loc[by_intensity_df["cells"] == celltype]
+    for timepoint in timepoints:
+        #slicing data
+        raw_data = raw_dataframe.loc[(raw_dataframe["measurement"] == measurement) & (raw_dataframe["timepoint"] == timepoint)].copy()
+        summary_data = summary_dataframe.loc[(summary_dataframe["measurement"] == measurement) & (summary_dataframe["timepoint"] == timepoint)].copy()
 
-        for media in set(data_select_by_cell["media"]):
-            if media in config.plot_exclude["media"]:
-                continue
-            data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
+        raw_data["green_intensity_percentage"] = raw_data["green_intensity"].apply(lambda x: 100*x/2.8)
+        raw_data["red_intensity_percentage"] = raw_data["red_intensity"].apply(lambda x: 100*x/2.8)
+        summary_data["green_intensity_percentage"] = summary_data["green_intensity"].apply(lambda x: 100*x/2.8)
+        summary_data["red_intensity_percentage"] = summary_data["red_intensity"].apply(lambda x: 100*x/2.8)
 
-            if plot_type == "average":
-                i_range = range(1)
-            elif plot_type == "all":
-                lengths = [len(r) for r in data_select_by_media[f"{y_data}_raw_array"]]
-                max_len = int(max(lengths))
-                i_range = range(max_len)
+        select_alpha = 1.0
+        if plot_type == "all" or plot_type == "both":
+            if plot_type == "both":
+                select_alpha = 0.2
 
-            for i in i_range:
+            for well, group in raw_data.groupby(["well"]):
+                row = group.iloc[0]
+                cells = row["cells"]
+                media = row["media"]
+                green_intensity = row["green_intensity"]
+                red_intensity = row["red_intensity"]
 
-                x = data_select_by_media["red_intensity_percentage"].values.copy()
-                
-                if plot_type == "average":
-                    y = data_select_by_media[f"{y_data}_average"].values.copy()
-                elif plot_type == "all":
-                    y = np.array([ (row[i] if i < len(row) else np.nan) for row in data_select_by_media[f"{y_data}_raw_array"] ])
+                if (cells in config.plot_exclude["cells"]
+                        or media in config.plot_exclude["media"]
+                        or green_intensity in config.plot_exclude["green_intensity"]
+                        or red_intensity in config.plot_exclude["red_intensity"]):
+                    continue
 
-
-                yerr = data_select_by_media[f"{y_data}_std"].values.copy()
+                x = group["green_intensity_percentage"].values.copy()
+                y = group["value"].values.copy()
 
                 # move final point (green=2.8 & red=0) to the right
-                is_final = (
-                    (data_select_by_media["green_intensity"] == 2.8) &
-                    (data_select_by_media["red_intensity"] == 0)
-                )
-
+                is_final = ((group["green_intensity"] == 2.8) &(group["red_intensity"] == 0))
                 x[is_final.values] = x.max() + 10  # move to the right
                 
                 order = np.argsort(x)
                 x = x[order]
                 y = y[order]
-                yerr = yerr[order]
 
-                # Create line segments for gradient
-                points = np.array([x, y]).T.reshape(-1, 1, 2)
-                segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-                # Normalize x values for colormap
-                norm = plt.Normalize(x.min(), x.max())
-                lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-                lc.set_linestyle(config.linestyle_map[media])
-                lc.set_array(x)
-                axs.add_collection(lc)
-
+                # No line segments as points are not connected to each other
+                norm = plt.Normalize(0, 100)
                 # Add scatter points with gradient colors
-                scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
-                                    marker = config.markerstyle_map[celltype],
-                                    facecolor = config.markercolor_map[celltype],
-                                    edgecolor = config.markercolor_map[celltype],
+                scatter = axs.scatter(x, y, c=row["green_intensity_percentage"], cmap=cmap, norm=norm, s=20, zorder=5,
+                                    marker = config.markerstyle_map[cells],
+                                    facecolor = config.markercolor_map[cells],
+                                    edgecolor = config.markercolor_map[cells],
+                                    alpha = select_alpha,
                                     )
-
-                # Add error bars
-                if plot_type == "average":
+                
+        if plot_type == "average" or plot_type == "both":
+                for (cells, media), group in summary_data.groupby(["cells","media"]):
+                    if (cells in config.plot_exclude["cells"]
+                                or media in config.plot_exclude["media"]):
+                            continue
+        
+                    x = group["green_intensity_percentage"].values.copy()
+                    y = group["mean"].values.copy()
+                    yerr = group["std"].values.copy()
+        
+                    # move final point (green=2.8 & red=0) to the right
+                    is_final = ((group["green_intensity"] == 2.8) &(group["red_intensity"] == 0))
+                    x[is_final.values] = x.max() + 10  # move to the right
+                    
+                    order = np.argsort(x)
+                    x = x[order]
+                    y = y[order]
+                    yerr = yerr[order]
+        
+                    # Create line segments for gradient
+                    points = np.array([x, y]).T.reshape(-1, 1, 2)
+                    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+        
+                    # Normalize x values for colormap
+                    norm = plt.Normalize(x.min(), x.max())
+                    lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
+                    lc.set_linestyle(config.linestyle_map[media])
+                    lc.set_alpha(select_alpha)
+                    lc.set_array(x)
+                    axs.add_collection(lc)
+        
+                    # Add scatter points with gradient colors
+                    scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
+                                        marker = config.markerstyle_map[cells],
+                                        facecolor = config.markercolor_map[cells],
+                                        edgecolor = config.markercolor_map[cells],
+                                        alpha = select_alpha,
+                                        )
+                    
                     axs.errorbar(x, y, yerr=yerr, fmt='none',
-                                ecolor= config.markercolor_map[celltype], alpha=1.0, capsize=2.0,
+                                ecolor= config.markercolor_map[cells], alpha=1.0, capsize=2.0,
                                 )
-
+    
     # labels
     leg1 = axs.legend(
         handles=cell_handles,
@@ -430,7 +404,138 @@ def plot_by_intensity(dataframe, y_data, plot_type, data_timearray_loc, ylabel: 
         plt.show()
         plt.close(fig)
 
+def plot_by_intensity_foldchange(summary_dataframe, measurement, timepoints: int | list[int], ylabel: str | None = None, title: str | None = None,
+                              title_extra: str = "",
+                              xlabel = "Green light intensity %",
+                                config: PlotConfig = DefaultConfig, save_image = False):
+    """
+    Plots fluorescence foldchange over intensity at a chosen time point. Fold change is calculated by the select green light divided by the 100% red light value
+    
+    :param summary_dataframe: dataframe where the summary data is
+    :param measurement: the measurement to plot (e.g. OD600 or GFP 395nm)
+    :param plot_type: select whether 'average' are plotted or 'all' data
+    :param timepoints: chosen time point (number of reading, e.g. 0 = first reading, 1 = second reading, etc.) or series of timepoints
+    :param ylabel: optional override for the ylabel text
+    :type ylabel: str | None
+    :param title: optional override for title text
+    :type title: str | None
+    :param title_extra: optional extra to tag onto the end of the title text
+    :type title_extra: str
+    :param xlabel: optional override for the xlabel text
+    :param config: config file for styling and saving the image
+    :type config: PlotConfig
+    :param save_image: if True, then image is saved instead of displayed
+    """
+    if ylabel is None:
+        ylabel = measurement
 
+    if title is None:
+        title = f"{ylabel} - by intensity - average - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+    if isinstance(timepoints, int): #single timepoint allows gradient colours to be used
+        timepoints = [timepoints]
+        colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
+        cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
+        timepoints_is_array = False
+    else:
+        cmap = plt.get_cmap("viridis")  # Use a different colormap for multiple timepoints
+        timepoints_is_array = True
+        #TODO - implement different line colours for multiple timepoints
+
+    fig, axs = plt.subplots()
+    for timepoint in timepoints:
+        #slicing data
+        summary_data = summary_dataframe.loc[(summary_dataframe["measurement"] == measurement) & (summary_dataframe["timepoint"] == timepoint)].copy()
+        summary_data["green_intensity_percentage"] = summary_data["green_intensity"].apply(lambda x: 100*x/2.8)
+        summary_data["red_intensity_percentage"] = summary_data["red_intensity"].apply(lambda x: 100*x/2.8)
+
+        for (cells, media), group in summary_data.groupby(["cells","media"]):
+            if (cells in config.plot_exclude["cells"]
+                        or media in config.plot_exclude["media"]):
+                    continue
+
+            green_data = group.loc[group["green_intensity"] > 0].copy()
+            x = green_data["green_intensity_percentage"].values
+
+            y_green = green_data["mean"].values
+            yerr_green = green_data["std"].values
+            y_red = group.loc[(group["red_intensity"] == 2.8) & (group["green_intensity"] == 0), "mean"].values.copy()
+            yerr_red = group.loc[(group["red_intensity"] == 2.8) & (group["green_intensity"] == 0), "std"].values.copy()
+
+            y = y_green / y_red  # Calculate fold change
+            yerr = np.sqrt((yerr_green / y_green)**2 + (yerr_red / y_red)**2) * y  # Propagate error
+
+            # move final point (green=2.8 & red=0) to the right
+            is_final = ((green_data["green_intensity"] == 2.8) &(green_data["red_intensity"] == 0))
+            x[is_final.values] = x.max() + 10  # move to the right
+            
+            order = np.argsort(x)
+            x = x[order]
+            y = y[order]
+            yerr = yerr[order]
+
+            # Create line segments for gradient
+            points = np.array([x, y]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+            # Normalize x values for colormap
+            norm = plt.Normalize(x.min(), x.max())
+            lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0, alpha=1.0)
+            lc.set_linestyle(config.linestyle_map[media])
+            lc.set_array(x)
+            axs.add_collection(lc)
+
+            # Add scatter points with gradient colors
+            scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
+                                marker = config.markerstyle_map[cells],
+                                facecolor = config.markercolor_map[cells],
+                                edgecolor = config.markercolor_map[cells],
+                                alpha = 1.0,
+                                )
+            
+            axs.errorbar(x, y, yerr=yerr, fmt='none',
+                        ecolor= config.markercolor_map[cells], alpha=1.0, capsize=2.0,
+                        )
+    
+    # labels
+    leg1 = axs.legend(
+        handles=cell_handles,
+        title="Cell type",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.00),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg1)
+
+    leg2 = axs.legend(
+        handles=media_handles,
+        title="Media",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.65),
+        borderaxespad=0.0,
+    )
+    axs.add_artist(leg2)
+
+    x_axis = axs.set_xlabel(xlabel)
+    x_axis.set_color("green")
+
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+    if save_image == True:
+        try:
+            Path(os.path.join(config.save_file_path, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(config.save_file_path, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
 
 def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
                             xlabel = "Time (hrs)",
@@ -730,7 +835,7 @@ def load_data(filepath):
     data = pd.read_csv(filepath, header = [0,1], index_col= 0)
    
     #Rebuild the MultiIndex with proper Timestamp objects
-    timestamps = pd.to_datetime(data.columns.get_level_values("timestamp"))
+    timestamps = pd.to_datetime(data.columns.get_level_values("timestamp"), dayfirst=True)
     measurements = data.columns.get_level_values("measurement")
     data.columns = pd.MultiIndex.from_arrays([measurements, timestamps], names=["measurement", "timestamp"])
     rows = []
@@ -932,14 +1037,14 @@ media_handles = [
 
 DefaultConfig.save_file_path = "26-07-22_optowell_test1"
 plot_exclude = {
-    "cells":["media"],
-    "media":[],
+    "cells":["media","JBL001","YX002"],
+    "media":["WM-met+"],
     #"green_intensity":[2.8,1.4,0.56,0.028],
-    "green_intensity":[],
+    "green_intensity":[2.8,1.4,0.56,0.028,0.28],
     "red_intensity":[],
 }
 DefaultConfig.plot_exclude = plot_exclude
-plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= " ", save_image = False)
+plot_timecourse(sorted_data_df, summary_df, "OD600", "all", title_extra= " ", save_image = False)
 #plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
 """
 plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
@@ -953,19 +1058,19 @@ plot_timecourse(sorted_data_df, "GFP488", "all", title_extra= "film on", save_im
 """
 plot_exclude = {
     "cells":[],
-    "media":[],
+    "media":["WM-met-"],
     #"green_intensity":[2.8,1.4,0.56,0.028],
     "green_intensity":[],
     "red_intensity":[],
 }
 DefaultConfig.plot_exclude = plot_exclude
+plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", [0,5], title_extra= "", save_image = False)
 
-
-plot_timecourse_custom(sorted_data_df, "GFP/OD600", "both", title_extra= "", save_image = False,
+""" plot_timecourse_custom(sorted_data_df, "GFP/OD600", "both", title_extra= "", save_image = False,
                        row_filter=lambda row: ((row["cells"] == "JBL001" and row["green_intensity"] in [0.0])
                                                or (row["cells"] == "media")
                                                or (row["cells"] == "JBL137" and row["green_intensity"] in [0.028, 0.0])))
-
+ """
 
 """
 plot_by_intensity(sorted_data_df,"OD600", "average", -2, title_extra= "", save_image = True)
@@ -979,126 +1084,6 @@ plot_by_intensity(sorted_data_df,"GFP488", "all", -2, title_extra= "", save_imag
 """
 
 
-def plot_by_intensity_all_separate(dataframe, y_data, data_timearray_loc, plot_select,
-                                   #plot_control,
-                                   ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
-                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
-                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
-                        alpha_used = False, save_image = False, save_filepath = None):
-    
-    if ylabel is None:
-        ylabel = y_data
-
-    if title is None:
-        title = f"{ylabel} - by intensity - all - {title_extra}"
-    else:
-        title = title + " - " + title_extra
-
-    if save_filepath is None:
-        save_filepath = save_file_path
-
-    by_intensity_df = dataframe[["cells","media","green_intensity","red_intensity",f"{y_data}_raw_array"]].copy()
-    by_intensity_df[f"{y_data}_raw_array"] = by_intensity_df[f"{y_data}_raw_array"].apply(lambda x: [array[data_timearray_loc] for array in x])
-    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
-
-    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-
-    data_select = by_intensity_df[by_intensity_df["cells"].isin(plot_select["cells"]) & by_intensity_df["media"].isin(plot_select["media"])]
-    n_positions = len(data_select[f"{y_data}_raw_array"].iloc[0]) if len(data_select) > 0 else 0
-    
-    #data_control = by_intensity_df[by_intensity_df["cells"].isin(plot_control["cells"]) and by_intensity_df["media"].isin(plot_control["media"])]
-
-    n_cols = 2  # 2 columns
-    n_rows = (n_positions + n_cols - 1) // n_cols  # Calculate rows needed
-    fig, axs = plt.subplots(n_rows, n_cols, figsize=(12, 4*n_rows))
-    axs = axs.flatten()  # Flatten to 1D array for easier indexing
-
-    for i in range(n_positions):
-        ax = axs[i]
-        x = data_select["green_intensity_percentage"].values.copy()
-        y = np.array([row[i] for row in data_select[f'{y_data}_raw_array']])
-
-        # move final point (green=2.8 & red=0) to the right
-        is_final = (
-            (data_select["green_intensity"] == 2.8) &
-            (data_select["red_intensity"] == 0)
-        )
-
-        x[is_final.values] = x.max() + 10  # move to the right
-        
-        order = np.argsort(x)
-        x = x[order]
-        y = y[order]
-
-        # Create line segments for gradient
-        points = np.array([x, y]).T.reshape(-1, 1, 2)
-        segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-        # Normalize x values for colormap
-        media = plot_select["media"][0]
-        celltype = plot_select["cells"][0]
-
-        norm = plt.Normalize(x.min(), x.max())
-        lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-        lc.set_linestyle(linestyle_map[media])
-        lc.set_array(x)
-        ax.add_collection(lc)
-
-        # Add scatter points with gradient colors
-        scatter = ax.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
-                            marker = markerstyle_map[celltype],
-                            facecolor = markercolor_map[celltype],
-                            edgecolor = markercolor_map[celltype],
-                            )
-        
-        # Auto-scale to fit LineCollection
-        ax.autoscale()
-        ax.set_title(f"Repeat {i+1}", fontsize = 8)
-        ax.grid(True, alpha=0.3)
-
-    # labels
-    leg1 = ax.legend(
-        handles=cell_handles,
-        title="Cell type",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1.10),
-        borderaxespad=0.0,
-    )
-    ax.add_artist(leg1)
-
-    leg2 = ax.legend(
-        handles=media_handles,
-        title="Media",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 0.65),
-        borderaxespad=0.0,
-    )
-    ax.add_artist(leg2)
-
-    fig.supxlabel(xlabel)
-    fig.supylabel(ylabel)
-    fig.suptitle(f"{ylabel} by intensity - all repeats separated", fontsize=14, y=1.00)
-
-    # Hide any unused subplots
-    for j in range(n_positions, len(axs)):
-        axs[j].axis('off')
-
-    fig.tight_layout()
-
-    if save_image == True:
-        try:
-            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
-            save_title = title.replace("/","_div_")
-            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
-            plt.close(fig)
-        except:
-            print("Could not save image, filepath not valid")
-    else:
-        plt.show()
-        plt.close(fig)
 
 
 plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
@@ -1113,284 +1098,6 @@ plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
 
 
 
-####
-#GFP by intensity - average over time
-def plot_by_intensity_average_over_time(dataframe, y_data, plot_select, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
-                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
-                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
-                        alpha_used = False, save_image = False, save_filepath = None):
-    
-    if ylabel is None:
-        ylabel = y_data
-
-    if title is None:
-        title = f"{ylabel} - by intensity - averages over time - {title_extra}"
-    else:
-        title = title + " - " + title_extra
-
-    if save_filepath is None:
-        save_filepath = save_file_path
-
-    by_intensity_df = dataframe[["cells","media","timepoints","green_intensity","red_intensity",f"{y_data}_average",f"{y_data}_std"]].copy()
-    by_intensity_df["green_intensity_percentage"] = by_intensity_df["green_intensity"].apply(lambda x: 100*x/2.8)
-    by_intensity_df["red_intensity_percentage"] = by_intensity_df["red_intensity"].apply(lambda x: 100*x/2.8)
-
-    times = by_intensity_df["timepoints"][0]
-    times_rounded = [round(x) for x in times]
-
-    err_norm = mcolors.Normalize(vmin=min(times), vmax=max(times))
-    err_cmap = plt.cm.tab20c
-    colors = [(1, 0, 0), (0, 1, 0)]  # Red (1,0,0) to Green (0,1,0)
-    cmap = LinearSegmentedColormap.from_list('red_green', colors, N=256)
-
-    errorbar_handles = []
-    for t in times_rounded:
-        color = err_cmap(err_norm(t))
-        handle = Line2D(
-            [0], [0],
-            color=color,
-            linewidth=2,
-            linestyle='-',
-            label=f"t{t}"
-            )
-        errorbar_handles.append(handle)
-
-    data_select = by_intensity_df[by_intensity_df["cells"].isin(plot_select["cells"]) & by_intensity_df["media"].isin(plot_select["media"])]
-    fig, axs = plt.subplots()
-
-    for celltype in set(data_select["cells"]):
-        data_select_by_cell = data_select.loc[data_select["cells"] == celltype]
-
-        for media in set(data_select_by_cell["media"]):
-            data_select_by_media = data_select_by_cell.loc[data_select_by_cell["media"] == media]
-
-            for i in range(len(times_rounded)):
-                data_select_by_time_avg = data_select_by_media[f"{y_data}_average"].copy().apply(lambda x: x[i])
-                data_select_by_time_std = data_select_by_media[f"{y_data}_std"].copy().apply(lambda x: x[i])
-                # selecting data based on time
-
-                # plot with gradient color
-                x = data_select_by_media["green_intensity_percentage"].values.copy()
-                y = data_select_by_time_avg
-                yerr = data_select_by_time_std
-
-                # move final point (green=2.8 & red=0) to the right
-                is_final = (
-                    (data_select_by_media["green_intensity"] == 2.8) &
-                    (data_select_by_media["red_intensity"] == 0)
-                )
-
-                x[is_final.values] = x.max() + 10  # move to the right
-                
-                order = np.argsort(x)
-                x = x[order]
-                y = y[order]
-                yerr = yerr[order]
-
-                # Create line segments for gradient
-                points = np.array([x, y]).T.reshape(-1, 1, 2)
-                segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-                # Normalize x values for colormap
-                norm = plt.Normalize(x.min(), x.max())
-                lc = LineCollection(segments, cmap=cmap, norm=norm, linewidth=1.0)
-                lc.set_linestyle(linestyle_map[media])
-                lc.set_array(x)
-                axs.add_collection(lc)
-
-                # Add scatter points with gradient colors
-                scatter = axs.scatter(x, y, c=x, cmap=cmap, norm=norm, s=20, zorder=5,
-                                    marker = markerstyle_map[celltype],
-                                    facecolor = markercolor_map[celltype],
-                                    edgecolor = markercolor_map[celltype],
-                                    )
-
-                # Add error bars
-                err_color = err_cmap(err_norm(times_rounded[i]))
-                axs.errorbar(x, y, yerr=yerr, fmt='none',
-                            ecolor= err_color, alpha=1.0, capsize=2.0,
-                            label = "t"+ str(times_rounded[i]),
-                            )
-
-    # labels
-    leg1 = axs.legend(
-        handles=cell_handles,
-        title="Cell type",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1.00),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg1)
-
-    leg2 = axs.legend(
-        handles=media_handles,
-        title="Media",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 0.65),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg2)
-
-    leg3 = axs.legend(
-        handles=errorbar_handles,
-        title="Time (error bars)",
-        loc="upper left",
-        bbox_to_anchor=(1.02, 0.30),
-        borderaxespad=0.0,
-    )
-    axs.add_artist(leg3)
-
-    x_axis = axs.set_xlabel(xlabel)
-    x_axis.set_color("green")
-
-    axs.set_ylabel(ylabel)
-    axs.set_title(title)
-
-    fig.tight_layout(rect=[0, 0, 0.75, 1])
-    if save_image == True:
-        try:
-            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
-            save_title = title.replace("/","_div_")
-            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
-            plt.close(fig)
-        except:
-            print("Could not save image, filepath not valid")
-    else:
-        plt.show()
-        plt.close(fig)
 
 
-plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
-#plot_by_intensity_average_over_time(sorted_data_df, "OD600", plot_select_override, title_extra="WM-met-", save_image=False)
-
-
-
-
-
-
-def plot_by_intensity_foldchange(dataframe, y_data, data_timearray_loc, ylabel: str | None = None, title: str | None = None, title_extra: str = "", xlabel = "Green light intensity %",
-                        plot_exclude = plot_exclude, markerstyle_map = markerstyle_map,
-                        linestyle_map = linestyle_map, line_color_map = line_color_map, line_alpha_map = line_alpha_map,
-                        alpha_used = False, save_image = False, save_filepath = None):
-#calculating fold changes
-    if ylabel is None:
-        ylabel = y_data
-
-    if title is None:
-        title = f"{ylabel} - by intensity - fold change - {title_extra}"
-    else:
-        title = title + " - " + title_extra
-
-    if save_filepath is None:
-        save_filepath = save_file_path
-
-
-
-    data_select = dataframe[["cells","media", "green_intensity", "red_intensity",f"{y_data}_average",f"{y_data}_std"]]
-    data_select["avg_select"] = data_select[f"{y_data}_average"].copy().apply(lambda x: x[data_timearray_loc])
-    data_select["std_select"] = data_select[f"{y_data}_std"].copy().apply(lambda x: x[data_timearray_loc])
-
-    media_row = data_select.loc[data_select["cells"] == "media"]
-    media_value = media_row[f"{y_data}_average"].copy().apply(lambda x: x[data_timearray_loc])
-
-    data_select["avg_normalised"] = data_select["avg_select"] - media_value.values
-    data_select = data_select[data_select["cells"] != "media"]
-
-    met_plus_df = data_select[data_select["media"] == "WM-met+"].copy()
-    met_minus_df = data_select[data_select["media"] == "WM-met-"].copy()
-
-    met_plus_df = met_plus_df[["cells", "green_intensity", "red_intensity", "avg_normalised", "std_select"]].rename(
-        columns={"avg_normalised": "avg_met_plus", "std_select": "std_met_plus"}
-    )
-    met_minus_df = met_minus_df[["cells", "green_intensity", "red_intensity", "avg_normalised", "std_select"]].rename(
-        columns={"avg_normalised": "avg_met_minus", "std_select": "std_met_minus"}
-    )
-
-    paired = pd.merge(
-        met_minus_df,
-        met_plus_df,
-        on=["cells", "green_intensity", "red_intensity"],
-        how="inner"  # use 'outer' to keep unpaired rows if you want to inspect them
-    )
-
-    paired["fold_change"] = paired["avg_met_plus"] / paired["avg_met_minus"]
-    paired["fc_std"] = paired["fold_change"] * np.sqrt(
-        (paired["std_met_minus"] / paired["avg_met_minus"].replace(0, np.nan))**2 +
-        (paired["std_met_plus"]  / paired["avg_met_plus"])**2
-    )
-
-    paired["green_intensity_percentage"] = paired["green_intensity"].apply(lambda x: 100*x/2.8)
-
-    cells = paired["cells"].unique()
-    palette = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-
-    fig, ax = plt.subplots(figsize=(7,5))
-
-    for ci, cell in enumerate(cells):
-        dfc = paired[paired["cells"] == cell].copy()
-        if dfc.empty:
-            continue
-
-        # base x
-        x = dfc["green_intensity_percentage"].to_numpy(dtype=float)
-
-        # shift where red intensity == 0 by +10
-        final_mask = dfc["red_intensity"].to_numpy(dtype=float) == 0
-        x_shift = x.copy()
-        x_shift[final_mask] = x_shift[final_mask] + 10.0
-
-        # y and yerr
-        y = dfc["fold_change"].to_numpy(dtype=float)
-        yerr = dfc["fc_std"].to_numpy(dtype=float)
-
-        # sort by x_shift so lines look correct left->right
-        order = np.argsort(x_shift)
-        x_s = x_shift[order]
-        y_s = y[order]
-        yerr_s = yerr[order]
-
-        # line (use one palette color per cell)
-        line_color = palette[ci % len(palette)]
-        ax.plot(x_s, y_s, linestyle='-', marker=None, color=line_color, label=str(cell))
-
-        # scatter markers: use markerstyle_map and markercolor_map
-        marker = markerstyle_map.get(cell, "o")
-        mcolor = markercolor_map.get(cell, line_color)
-        ax.scatter(x_s, y_s, marker=marker, color=mcolor, edgecolors='k', zorder=5, s=50)
-
-        # errorbars
-        ax.errorbar(x_s, y_s, yerr=yerr_s, fmt='none', ecolor=mcolor, alpha=0.9, capsize=3)
-
-
-    # Add legends for cell types (markers)
-    cell_handles = [
-        Line2D([0],[0], marker=markerstyle_map.get(c, "o"), color="w",
-            markerfacecolor=markercolor_map.get(c, palette[i % len(palette)]),
-            markeredgecolor='k', markersize=7, label=str(c))
-        for i,c in enumerate(cells)
-    ]
-    leg1 = ax.legend(handles=cell_handles, title="Cell type", loc="upper left", bbox_to_anchor=(1.02, 1.0))
-    ax.add_artist(leg1)
-
-    # axes labels / title / grid
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel("Fold change (met+ / met-)")
-    ax.set_title(title)
-    ax.grid(alpha=0.25)
-
-    # tighten layout and show
-    fig.tight_layout(rect=[0,0,0.78,1])  # leave room for legends on right
-    if save_image == True:
-        try:
-            Path(os.path.join(save_filepath, "figures")).mkdir(parents = True, exist_ok = True)
-            save_title = title.replace("/","_div_")
-            plt.savefig(os.path.join(save_filepath, "figures", f"{save_title}.png"))
-            plt.close(fig)
-        except:
-            print("Could not save image, filepath not valid")
-    else:
-        plt.show()
-        plt.close(fig)
-
-
-plot_by_intensity_foldchange(sorted_data_df, "OD600", -2)
+plot_by_intensity_foldchange(summary_df, "OD600", 5)
