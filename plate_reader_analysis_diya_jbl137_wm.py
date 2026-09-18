@@ -101,6 +101,149 @@ def build_intensity_colour_map(green_intensities, cmap_name = None) -> Dict[Any,
             for intensity in green_intensities_set
         }
 
+def create_plot_handles(config: PlotConfig):
+    #legend handles
+    cell_handles = [
+        Line2D(
+            [], [], 
+            marker = config.markerstyle_map[cell],
+            linestyle = "None",
+            markerfacecolor = config.markercolor_map[cell],
+            markeredgecolor = config.markercolor_map[cell],
+            markersize = 6,
+            label = cell
+        )
+        for cell in config.markerstyle_map
+    ]
+
+    sorted_intensities = sorted(
+        config.line_color_map.keys(),
+        key=float,
+        reverse=True
+    )
+
+    intensity_handles = [
+        Line2D(
+            [], [],
+            color=config.line_color_map[intensity],
+            linewidth=2,
+            label=intensity
+        )
+        for intensity in sorted_intensities
+    ]
+
+    media_handles = [
+        Line2D(
+            [], [],
+            color = "black",
+            linestyle = config.linestyle_map[media],
+            linewidth = 2,
+            label = media
+        )
+        for media in config.linestyle_map
+    ]
+
+    return cell_handles, intensity_handles, media_handles
+
+def load_data(filepath):
+    
+    #initialises columns of dataframe
+    columns = [
+                "cells", #str e.g. YX001
+                "media", #str e.g. WM-met+
+                "green_intensity", #float e.g. 2.8
+                "red_intensity", #float e.g. 2.8
+                "timestamp", #datetime
+                "timepoint", #int, e.g. 1,2. Count of number of times data is collected
+                "time", #float in hours
+                "measurement", #str e.g. OD600, GFP 395nm
+                "value", #float
+               ]
+    sorted_data_df = pd.DataFrame(columns=columns).astype(object)
+
+    #Loading data
+    data = pd.read_csv(filepath, header = [0,1], index_col= 0)
+   
+    #Rebuild the MultiIndex with proper Timestamp objects
+    timestamps = pd.to_datetime(data.columns.get_level_values("timestamp"), dayfirst=True)
+    measurements = data.columns.get_level_values("measurement")
+    data.columns = pd.MultiIndex.from_arrays([measurements, timestamps], names=["measurement", "timestamp"])
+    rows = []
+
+    #Populating the DF
+    for well in data.index:
+        
+        #Plate settings
+        cells = plate_map[well][0]
+        media = plate_map[well][1]
+        green_intensity = plate_map[well][2]
+        red_intensity = plate_map[well][3]
+
+        #Populate for each mode and timestamp
+        for measurement, timestamp in data.columns:
+            timestamps = data[measurement].columns
+            timepoint = timestamps.get_loc(timestamp)
+            initial_time = timestamps.min()
+            time = (timestamp - initial_time).total_seconds() /3600
+            value = data.loc[well, (measurement, timestamp)]
+            rows.append({
+                "well": well,
+                "cells": cells,
+                "media": media,
+                "green_intensity": green_intensity,
+                "red_intensity": red_intensity,
+                "timestamp": timestamp,
+                "timepoint": timepoint,
+                "time" : time,
+                "measurement": measurement,
+                "value": value,
+            })
+
+    sorted_data_df = pd.DataFrame(rows)
+
+    #Calculating signal div OD600
+    select_od_data = sorted_data_df.loc[sorted_data_df["measurement"] == "OD600"].copy()
+    new_rows = []
+    for measurement in sorted_data_df["measurement"].unique():
+        if measurement == "OD600":
+            continue
+        else:
+            select_measurement_data = sorted_data_df.loc[sorted_data_df["measurement"] == measurement].copy()
+            calculated_measurement = f"{measurement}/OD600"
+            for index, measure_row in select_measurement_data.iterrows():
+                well = measure_row["well"]
+                timepoint = measure_row["timepoint"]
+
+                #finding corresponding OD row
+                od_row = select_od_data[(select_od_data["well"] == well) & (select_od_data["timepoint"] == timepoint)]
+                od_value = od_row["value"].iloc[0]
+
+                #calculating ratio
+                measure_value = measure_row["value"]
+                ratio = measure_value / od_value
+
+                #writing new data row
+                new_row = measure_row.copy()
+                new_row["measurement"] = calculated_measurement
+                new_row["value"] = ratio
+                new_rows.append(new_row)
+
+    calculated_data_df = pd.DataFrame(new_rows)
+    sorted_data_df = pd.concat([sorted_data_df, calculated_data_df], ignore_index= True)
+
+    #finding means and averages
+    summary_df = sorted_data_df.groupby(["cells","media","green_intensity","red_intensity","timestamp","time","timepoint","measurement"], as_index=False).agg(
+        min_timestamp = ("timestamp", "min"),
+        mean = ("value","mean"),
+        std = ("value","std"),
+        count = ("value","count")
+    )
+
+    # Generating color map
+    DefaultConfig.line_color_map = build_intensity_colour_map(sorted_data_df["green_intensity"].unique())
+
+    return sorted_data_df, summary_df
+
 def plot_timecourse(raw_dataframe, summary_dataframe, measurement, plot_type, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
                             xlabel = "Time (hrs)",
                             config: PlotConfig = DefaultConfig, save_image = False,
@@ -185,7 +328,9 @@ def plot_timecourse(raw_dataframe, summary_dataframe, measurement, plot_type, yl
                         linestyle = config.linestyle_map[media], linewidth = 1.0,
                         alpha = 1.0,
                         )
-                            
+
+    cell_handles, intensity_handles, media_handles = create_plot_handles(config)
+
     leg1 = axs.legend(
         handles=cell_handles,
         title="Cell type",
@@ -367,6 +512,7 @@ def plot_by_intensity(raw_dataframe, summary_dataframe, measurement, plot_type, 
                                 )
     
     # labels
+    cell_handles, intensity_handles, media_handles = create_plot_handles(config)
     leg1 = axs.legend(
         handles=cell_handles,
         title="Cell type",
@@ -500,6 +646,7 @@ def plot_by_intensity_foldchange(summary_dataframe, measurement, timepoints: int
                         )
     
     # labels
+    cell_handles, intensity_handles, media_handles = create_plot_handles(config)
     leg1 = axs.legend(
         handles=cell_handles,
         title="Cell type",
@@ -815,110 +962,13 @@ for row in range(0,len(red_array)):
 for key, item in plate_map.items():
     plate_map[key].append("_".join(map(str, item)))
 
-def load_data(filepath):
-    
-    #initialises columns of dataframe
-    columns = [
-                "cells", #str e.g. YX001
-                "media", #str e.g. WM-met+
-                "green_intensity", #float e.g. 2.8
-                "red_intensity", #float e.g. 2.8
-                "timestamp", #datetime
-                "timepoint", #int, e.g. 1,2. Count of number of times data is collected
-                "time", #float in hours
-                "measurement", #str e.g. OD600, GFP 395nm
-                "value", #float
-               ]
-    sorted_data_df = pd.DataFrame(columns=columns).astype(object)
 
-    #Loading data
-    data = pd.read_csv(filepath, header = [0,1], index_col= 0)
-   
-    #Rebuild the MultiIndex with proper Timestamp objects
-    timestamps = pd.to_datetime(data.columns.get_level_values("timestamp"), dayfirst=True)
-    measurements = data.columns.get_level_values("measurement")
-    data.columns = pd.MultiIndex.from_arrays([measurements, timestamps], names=["measurement", "timestamp"])
-    rows = []
-
-    #Populating the DF
-    for well in data.index:
-        
-        #Plate settings
-        cells = plate_map[well][0]
-        media = plate_map[well][1]
-        green_intensity = plate_map[well][2]
-        red_intensity = plate_map[well][3]
-
-        #Populate for each mode and timestamp
-        for measurement, timestamp in data.columns:
-            timestamps = data[measurement].columns
-            timepoint = timestamps.get_loc(timestamp)
-            initial_time = timestamps.min()
-            time = (timestamp - initial_time).total_seconds() /3600
-            value = data.loc[well, (measurement, timestamp)]
-            rows.append({
-                "well": well,
-                "cells": cells,
-                "media": media,
-                "green_intensity": green_intensity,
-                "red_intensity": red_intensity,
-                "timestamp": timestamp,
-                "timepoint": timepoint,
-                "time" : time,
-                "measurement": measurement,
-                "value": value,
-            })
-
-    sorted_data_df = pd.DataFrame(rows)
-
-    #Calculating signal div OD600
-    select_od_data = sorted_data_df.loc[sorted_data_df["measurement"] == "OD600"].copy()
-    new_rows = []
-    for measurement in sorted_data_df["measurement"].unique():
-        if measurement == "OD600":
-            continue
-        else:
-            select_measurement_data = sorted_data_df.loc[sorted_data_df["measurement"] == measurement].copy()
-            calculated_measurement = f"{measurement}/OD600"
-            for index, measure_row in select_measurement_data.iterrows():
-                well = measure_row["well"]
-                timepoint = measure_row["timepoint"]
-
-                #finding corresponding OD row
-                od_row = select_od_data[(select_od_data["well"] == well) & (select_od_data["timepoint"] == timepoint)]
-                od_value = od_row["value"].iloc[0]
-
-                #calculating ratio
-                measure_value = measure_row["value"]
-                ratio = measure_value / od_value
-
-                #writing new data row
-                new_row = measure_row.copy()
-                new_row["measurement"] = calculated_measurement
-                new_row["value"] = ratio
-                new_rows.append(new_row)
-
-    calculated_data_df = pd.DataFrame(new_rows)
-    sorted_data_df = pd.concat([sorted_data_df, calculated_data_df], ignore_index= True)
-
-    #finding means and averages
-    summary_df = sorted_data_df.groupby(["cells","media","green_intensity","red_intensity","timestamp","time","timepoint","measurement"], as_index=False).agg(
-        min_timestamp = ("timestamp", "min"),
-        mean = ("value","mean"),
-        std = ("value","std"),
-        count = ("value","count")
-    )
-
-    # Generating color map
-    DefaultConfig.line_color_map = build_intensity_colour_map(sorted_data_df["green_intensity"].unique())
-
-    return sorted_data_df, summary_df
 
 
 
 #Use the extracted_combined file from plate_reader_extraction script to get the right format
 filepath = "26-09-10 YX002 test 1/26-09-10 YX002 test 1_diya_extracted_combined.csv"
-
+DefaultConfig.save_file_path = filepath.split("/")[0]
 
 sorted_data_df, summary_df = load_data(filepath)
 
@@ -935,7 +985,7 @@ style_map = {
 }
 
 
-#default color and linestyles
+#custom color and linestyles
 #marker style and color
 markerstyle_map = {"JBL001":"s",      
                     "YX001":"o",
@@ -984,78 +1034,19 @@ alpha_map = {"2.8": 1,
                  "0":0.1,
 }
 
-save_file_path = "26-07-22_optowell_test1"
 
-#legend handles
-cell_handles = [
-    Line2D(
-        [], [], 
-        marker = markerstyle_map[cell],
-        linestyle = "None",
-        markerfacecolor = markercolor_map[cell],
-        markeredgecolor = markercolor_map[cell],
-        markersize = 6,
-        label = cell
-    )
-    for cell in markerstyle_map
-]
-
-sorted_intensities = sorted(
-    line_color_map.keys(),
-    key=float,
-    reverse=True
-)
-
-intensity_handles = [
-    Line2D(
-        [], [],
-        color=line_color_map[intensity],
-        linewidth=2,
-        label=intensity
-    )
-    for intensity in sorted_intensities
-]
-
-media_handles = [
-    Line2D(
-        [], [],
-        color = "black",
-        linestyle = linestyle_map[media],
-        linewidth = 2,
-        label = media
-    )
-    for media in linestyle_map
-]
-
-
-
-
-
-
-
-
-
-DefaultConfig.save_file_path = "26-07-22_optowell_test1"
 plot_exclude = {
-    "cells":["media","JBL001","YX002"],
-    "media":["WM-met+"],
+    "cells":["YX001","JBL001"],
+    "media":[],
     #"green_intensity":[2.8,1.4,0.56,0.028],
-    "green_intensity":[2.8,1.4,0.56,0.028,0.28],
+    "green_intensity":[2.8,1.4,0.56,0.028],
     "red_intensity":[],
 }
 DefaultConfig.plot_exclude = plot_exclude
-plot_timecourse(sorted_data_df, summary_df, "OD600", "all", title_extra= " ", save_image = False)
+plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX002 0.28 no JBL001", save_image = True)
 #plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
-"""
-plot_timecourse(sorted_data_df, "OD600", "average", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP395", "average", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP/OD600", "average", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP488", "average", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "OD600", "all", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP395", "all", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP/OD600", "all", title_extra= "film on", save_image = False)
-plot_timecourse(sorted_data_df, "GFP488", "all", title_extra= "film on", save_image = False)
-"""
+
+
 plot_exclude = {
     "cells":[],
     "media":["WM-met-"],
@@ -1064,40 +1055,4 @@ plot_exclude = {
     "red_intensity":[],
 }
 DefaultConfig.plot_exclude = plot_exclude
-plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", [0,5], title_extra= "", save_image = False)
-
-""" plot_timecourse_custom(sorted_data_df, "GFP/OD600", "both", title_extra= "", save_image = False,
-                       row_filter=lambda row: ((row["cells"] == "JBL001" and row["green_intensity"] in [0.0])
-                                               or (row["cells"] == "media")
-                                               or (row["cells"] == "JBL137" and row["green_intensity"] in [0.028, 0.0])))
- """
-
-"""
-plot_by_intensity(sorted_data_df,"OD600", "average", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP395", "average", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP/OD600", "average", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP488", "average", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"OD600", "all", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP395", "all", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP/OD600", "all", -2, title_extra= "", save_image = True)
-plot_by_intensity(sorted_data_df,"GFP488", "all", -2, title_extra= "", save_image = True)
-"""
-
-
-
-
-plot_select_override = {"cells":["JBL137"],"media":["WM-met-"]}
-#plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
-#plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
-#plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met- t12", save_image=True)
-plot_select_override = {"cells":["JBL137"],"media":["WM-met+"]}
-#plot_by_intensity_all_separate(sorted_data_df, "GFP395", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
-#plot_by_intensity_all_separate(sorted_data_df, "OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
-#plot_by_intensity_all_separate(sorted_data_df, "GFP/OD600", -2, plot_select_override, title_extra="WM-met+ t12", save_image=True)
-
-
-
-
-
-
-plot_by_intensity_foldchange(summary_df, "OD600", 5)
+#plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", [0,5], title_extra= "", save_image = False)
