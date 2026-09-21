@@ -1012,12 +1012,12 @@ plot_exclude = {
 }
 
 #od600 - average
-line_color_map = {"2.8": (0.0,1.0,0.0),
-             "1.4": (0.5,0.5,0.0),
-             "0.56":(0.6,0.4,0.0),
-             "0.28":(0.8,0.2,0.0),
-             "0.028":(0.9,0.1,0.0),
-             "0.0":(1.0,0.0,0.0),
+line_color_map = {2.8: (0.0,1.0,0.0),
+             1.4: (0.5,0.5,0.0),
+             0.56:(0.6,0.4,0.0),
+             0.28:(0.0,1.0,0.0),
+             0.028:(0.0,1.0,0.0),
+             0.0:(1.0,0.0,0.0),
 }
 
 
@@ -1036,23 +1036,17 @@ alpha_map = {"2.8": 1,
 
 
 plot_exclude = {
-    "cells":["YX001","JBL001"],
+    "cells":[ "media", "YX001"],
     "media":[],
     #"green_intensity":[2.8,1.4,0.56,0.028],
-    "green_intensity":[2.8,1.4,0.56,0.028],
-    "red_intensity":[],
-}
-DefaultConfig.plot_exclude = plot_exclude
-plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX002 0.28 no JBL001", save_image = True)
-#plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
-
-
-plot_exclude = {
-    "cells":[],
-    "media":["WM-met-"],
     #"green_intensity":[2.8,1.4,0.56,0.028],
     "green_intensity":[],
     "red_intensity":[],
 }
 DefaultConfig.plot_exclude = plot_exclude
-#plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", [0,5], title_extra= "", save_image = False)
+#DefaultConfig.line_color_map = line_color_map
+plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "YX002", save_image = True)
+#plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
+
+
+#plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", 5, title_extra= "t12 YX compare all", save_image = True)
