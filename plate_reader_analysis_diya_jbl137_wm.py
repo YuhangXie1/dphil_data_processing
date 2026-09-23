@@ -837,7 +837,9 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
         plt.show()
         plt.close(fig)
 
-#generating plate map
+def populate_plate_map(optical_power_map, cell_map, media_map):
+    pass
+
 key_rows = ["A", "B", "C", "D", "E", "F", "G", "H"]
 key_columns = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 key_wells = [str(row)+str(col) for row in key_rows for col in key_columns]
