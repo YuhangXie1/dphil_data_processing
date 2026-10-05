@@ -28,6 +28,7 @@ def main(filepath):
     
     DefaultConfig.plot_exclude = plot_exclude
     plot_brightness_by_frame(dataframe, "LED450NM")
+    plot_diff_by_fov(dataframe, "LED450NM")
     
 
 
@@ -101,11 +102,11 @@ def add_light_regime_to_dataframe(dataframe, light_regime_auto = True, light_reg
     return dataframe
 
 
-def plot_diff_by_fov(dataframe, LED, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
+""" def plot_diff_by_fov(dataframe, LED, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
                             xlabel = "Frames",
                             config: PlotConfig = DefaultConfig, save_image = False,
                            ):
-    """
+    """"""
     Plots brightness over frames
     
     :param dataframe: dataframe where the data is (raw)
@@ -120,7 +121,7 @@ def plot_diff_by_fov(dataframe, LED, ylabel: str | None = None, title: str | Non
     :param config: config file for styling and saving the image
         :type config: PlotConfig
     :param save_image: if True, then image is saved instead of displayed
-    """
+    """"""
 
     if ylabel is None:
         ylabel = "Brightness (AU)"
@@ -210,7 +211,7 @@ def plot_diff_by_fov(dataframe, LED, ylabel: str | None = None, title: str | Non
             print("Could not save image, filepath not valid")
     else:
         plt.show()
-        plt.close(fig)
+        plt.close(fig) """
 
 def plot_brightness_by_frame(dataframe, LED, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
                             xlabel = "Frames",
@@ -312,6 +313,237 @@ def plot_brightness_by_frame(dataframe, LED, ylabel: str | None = None, title: s
             plt.close(fig)
         except:
             print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
+def plot_diff_by_fov(
+        dataframe,
+        LED,
+        ylabel="Brightness difference (AU)",
+        title=None,
+        config: PlotConfig = DefaultConfig,
+        save_image=False,
+        end_period=10,
+    ):
+
+    # ------------------------------------------------------------
+    # Filter data and assign each FOV its light regime
+    # ------------------------------------------------------------
+    dataframe = dataframe.loc[dataframe["LED"] == LED].copy()
+
+    dataframe = add_light_regime_to_dataframe(
+        dataframe,
+        light_regime_auto=config.light_regime_auto,
+        light_regime_custom=config.light_regime
+    )
+
+    # ------------------------------------------------------------
+    # Collect the three brightness-difference calculations
+    # ------------------------------------------------------------
+    results = []
+
+    for fov, group in dataframe.groupby("FOV"):
+
+        light_regime = group["light_regime"].iloc[0]
+
+        if (
+            fov in config.plot_exclude["fov"]
+            or light_regime in config.plot_exclude["light_regime"]
+        ):
+            continue
+
+        # Make sure frames are in the correct order
+        group = group.sort_values("Frame")
+
+        brightness = group["Mean_Brightness"]
+
+        bright_min = brightness.min()
+        bright_max = brightness.max()
+        bright_end = brightness.iloc[-1]
+
+        # Average of final N frames
+        bright_end_average = brightness.iloc[-end_period:].mean()
+
+        results.append({
+            "FOV": fov,
+            "light_regime": light_regime,
+
+            # Calculation 1
+            "Max - min": bright_max - bright_min,
+
+            # Calculation 2
+            "End - min": bright_end - bright_min,
+
+            # Calculation 3
+            "End mean - min": bright_end_average - bright_min,
+        })
+
+    results = pd.DataFrame(results).sort_values("FOV")
+
+
+    # ------------------------------------------------------------
+    # Colours
+    #
+    # Each regime keeps its overall colour:
+    #   green -> shades of green
+    #   dark  -> shades of grey
+    #   red   -> shades of red
+    #
+    # Within each regime, each calculation gets a different shade.
+    # ------------------------------------------------------------
+    colour_map = {
+        "green": {
+            "Max - min":      "#006d2c",
+            "End - min":      "#31a354",
+            "End mean - min": "#a1d99b",
+        },
+
+        "dark": {
+            "Max - min":      "#252525",
+            "End - min":      "#737373",
+            "End mean - min": "#bdbdbd",
+        },
+
+        "red": {
+            "Max - min":      "#a50f15",
+            "End - min":      "#de2d26",
+            "End mean - min": "#fb6a4a",
+        },
+    }
+
+
+    # ------------------------------------------------------------
+    # Plot clustered bars
+    # ------------------------------------------------------------
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    x = np.arange(len(results))
+
+    bar_width = 0.25
+
+    calculations = [
+        "Max - min",
+        "End - min",
+        "End mean - min",
+    ]
+
+    offsets = [
+        -bar_width,
+        0,
+        bar_width,
+    ]
+
+    for calculation, offset in zip(calculations, offsets):
+
+        colours = [
+            colour_map[regime][calculation]
+            for regime in results["light_regime"]
+        ]
+
+        ax.bar(
+            x + offset,
+            results[calculation],
+            width=bar_width,
+            color=colours,
+            edgecolor="black",
+            linewidth=0.5,
+        )
+
+
+    # ------------------------------------------------------------
+    # Axis formatting
+    # ------------------------------------------------------------
+    ax.set_xticks(x)
+    ax.set_xticklabels(results["FOV"])
+
+    ax.set_xlabel("FOV")
+    ax.set_ylabel(ylabel)
+
+    if title is None:
+        title = f"Change in mean pixel brightness by FOV - {LED}"
+
+    ax.set_title(title)
+
+    # Useful when some differences are negative
+    ax.axhline(0, color="black", linewidth=0.8)
+
+
+    # ------------------------------------------------------------
+    # Legend 1: calculation type
+    #
+    # Grey example bars are used because the actual colour depends
+    # on the FOV's light regime.
+    # ------------------------------------------------------------
+    calculation_handles = [
+        plt.Rectangle(
+            (0, 0), 1, 1,
+            facecolor=colour,
+            edgecolor="black",
+            label=label
+        )
+        for colour, label in zip(
+            ["#252525", "#737373", "#bdbdbd"],
+            calculations
+        )
+    ]
+
+    calculation_legend = ax.legend(
+        handles=calculation_handles,
+        title="Calculation",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+    )
+
+    ax.add_artist(calculation_legend)
+
+
+    # ------------------------------------------------------------
+    # Legend 2: light regime
+    # ------------------------------------------------------------
+    regime_handles = [
+        plt.Rectangle(
+            (0, 0), 1, 1,
+            facecolor=colour_map[regime]["End - min"],
+            edgecolor="black",
+            label=regime
+        )
+        for regime in ["green", "dark", "red"]
+    ]
+
+    ax.legend(
+        handles=regime_handles,
+        title="Light regime",
+        loc="upper left",
+        bbox_to_anchor=(1.02, 0.68),
+    )
+
+
+    fig.tight_layout(rect=[0, 0, 0.82, 1])
+
+
+    # ------------------------------------------------------------
+    # Save or show
+    # ------------------------------------------------------------
+    if save_image:
+
+        try:
+            figure_dir = Path(config.save_file_path) / "figures"
+            figure_dir.mkdir(parents=True, exist_ok=True)
+
+            save_title = title.replace("/", "_div_")
+
+            plt.savefig(
+                figure_dir / f"{save_title}.png",
+                dpi=300,
+                bbox_inches="tight"
+            )
+
+            plt.close(fig)
+
+        except Exception as e:
+            print(f"Could not save image: {e}")
+
     else:
         plt.show()
         plt.close(fig)

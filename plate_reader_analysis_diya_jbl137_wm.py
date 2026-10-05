@@ -856,31 +856,31 @@ DEFAULT_OPTICAL_POWER = np.array([
 	# Channel 0 (Color 0 or 4). Blue on v0.4c
 	[[0 / (2**(7-row)) for col in range(NCOLS)] for row in range(NROWS)],
 
-    # Channel 1 – Green light (checkerboard starting green at B2)
+    # Channel 1 – Green light
     np.array([
         # Columns 1–12 (A–L), Rows A–H
-        [2.8,	0.56,   1.4,    2.8,	0.56,   1.4,    2.8,	0.56,   1.4,   	2.8,	0.56,   1.4,],  # Row A
-        [0.0,  	0.28,  	0.28,  	0.0,  	0.28,  	0.28,	0.0,  	0.28,  	0.28,	0.0,  	0.28,  	0.28,],  # Row B
-        [2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,  	2.8,  	1.4,  	0.56,],  # Row C
-        [0.028,	0.028,  2.8,    0.028,	0.028,  2.8,    0.028,	0.028,  2.8,   	0.028,	0.028,  2.8,],  # Row D
-        [1.4,  	2.8,  	0.0,  	1.4,  	2.8,  	0.0, 	1.4,  	2.8,  	0.0,    1.4,  	2.8,  	0.0,],  # Row E
-        [0.28,	0.0,    2.8,    0.28,	0.0,    2.8,  	0.28,	0.0,    2.8,  	0.28,	0.0,    2.8,],  # Row F
-        [0.56,	2.8,    0.028,  0.56,	2.8,    0.028, 	0.56,	2.8,    0.028,  0.56,	2.8,    0.028,],  # Row Gh
-        [2.8,	2.8,    0.0,    0.0,    2.8,    2.8,    0.0,    0.0,    2.8,    0.0,    0.0,    2.8],  # Row H
+        [0.0,		0.56,   	1.4,    	0.028,	0.56,	0.028,  0.0,    1.4,	0.56,   0.28,   0.0,	0.028],  # Row A
+        [0.028,  	1.4,  		0.56,  		0.0,	1.4,  	0.0,  	0.56,	0.028,  0.28,  	0.028,	1.4,  	0.56],  # Row B
+        [0.28,  	0.28,  		0.0,  		0.28,	0.028,  1.4,  	0.28,  	0.56,  	1.4,  	0.0,  	0.56,  	0.28],  # Row C
+        [1.4,		0.028,  	0.028,    	1.4,	0.0,	0.56,  	0.028,  0.0,	0.028,  0.56,   0.28,	1.4],  # Row D
+        [0.56,  	0.0,  		0.28,  		0.56,	0.28,  	0.28,  	1.4, 	0.28,  	0.0,  	1.4,    0.028,  0.0],  # Row E
+        [0.56,		0.0,    	0.0,    	0.28,	0.028,	0.56,   1.4,  	0.56,	1.4,    0.0,  	0.56,	0.028],  # Row F
+        [0.028,		0.28,    	0.028,  	1.4,	0.28,	1.4,    0.0, 	1.4,	0.56,   0.56,  	1.4,	0.0],  # Row G
+        [0.56,		0.56,    	0.28,    	0.028,	0.0,    0.28,   0.28,   0.028,  0.56,   0.0,    0.0,    0.0],  # Row H
     ]),
 	# Channel 2 (Color 2 or 6). Yellow-Green or White on v0.4c
 	[[0 / (2**row) for col in range(NCOLS)] for row in range(NROWS)],    
 
-    # Channel 3 – Red light (opposite checkerboard cells)
+    # Channel 3 – Red light
     np.array([
-        [0.0,	2.8,	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,    2.8],  # Row A
-        [2.8,   2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,   	2.8,    2.8,    2.8],  # Row B
-        [2.8,   2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,    2.8,   	2.8,    2.8,    2.8],  # Row C
-        [2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,  	0.0,  	2.8,  	2.8,    0.0],  # Row D
-        [2.8,   2.8,    2.8,    2.8,   	2.8,    2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row E
-        [2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8, 	2.8,    2.8,    2.8,    2.8,    2.8,    2.8],  # Row F
-        [2.8,   0.0,    2.8,    2.8,    0.0,    2.8,    2.8,   	0.0,   	2.8,    2.8,    0.0,    2.8],  # Row G
-        [0.0,   0.0,    2.8,   	2.8, 	0.0,  	0.0, 	2.8,  	2.8,  	0.0,  	2.8,  	2.8,   	0.0],  # Row H
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row A
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row B
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row C
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row D
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row E
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row F
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row G
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row H
     ])
 ])
 
@@ -910,14 +910,14 @@ medium = {
 
 cell_map = np.array([
         #1      2       3       4       5       6       7       8       9       10      11      12
-        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row A
-        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row B
-        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row C
-        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row D
-        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row E
-        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row F
-        [2,	    2,	    2,  	2,  	2,  	2,  	3,  	3,  	3,  	3,  	3,      3],  # Row G
-        [1,	    1,	    1,  	1,  	1,  	1,  	1,  	1,  	0,  	0,  	0,      0],  # Row H
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row A
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row B
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row C
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row D
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row E
+        [2,	    3,	    1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,  	3,      1],  # Row F
+        [2,	    3,	    1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,  	3,      1],  # Row G
+        [0,	    0,	    1,  	2,  	3,  	1,  	2,  	3,  	0,  	0,  	0,      0],  # Row H
 ])
 
 media_map = np.array([
@@ -929,7 +929,7 @@ media_map = np.array([
         [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row E
         [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row F
         [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row G
-        [1,	    1,	    1,  	1,  	2,  	2,  	2,  	2,  	1,  	2,  	1,      2],  # Row H
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row H
 ])
 
 #turn light array into labels - need to code
@@ -969,7 +969,7 @@ for key, item in plate_map.items():
 
 
 #Use the extracted_combined file from plate_reader_extraction script to get the right format
-filepath = "26-09-10 YX002 test 1/26-09-10 YX002 test 1_diya_extracted_combined.csv"
+filepath = "26-10-01 YX002 diya test 2/26-10-01 YX002 diya test 2_diya_extracted_combined.csv"
 DefaultConfig.save_file_path = filepath.split("/")[0]
 
 sorted_data_df, summary_df = load_data(filepath)
@@ -1038,17 +1038,24 @@ alpha_map = {"2.8": 1,
 
 
 plot_exclude = {
-    "cells":[ "media", "YX001"],
+    "cells":[
+            #"media",
+             "JBL001",
+             #"YX001",
+             #"YX002",
+
+             ],
     "media":[],
+    "green_intensity":[1.4,0.56,0.028],
     #"green_intensity":[2.8,1.4,0.56,0.028],
-    #"green_intensity":[2.8,1.4,0.56,0.028],
-    "green_intensity":[],
+    #"green_intensity":[],
     "red_intensity":[],
 }
 DefaultConfig.plot_exclude = plot_exclude
-#DefaultConfig.line_color_map = line_color_map
-plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "YX002", save_image = True)
+DefaultConfig.line_color_map = line_color_map
+plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX comparison - no JBL001", save_image = True)
+
 #plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
 
 
-#plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", 5, title_extra= "t12 YX compare all", save_image = True)
+#plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", 5, title_extra= "t12 YX comparison", save_image = True)

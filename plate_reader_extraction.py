@@ -92,16 +92,17 @@ all_plate_table_df = {}
 
 chosen_plate_reader = "downstairs" #choose "downstairs" or "upstairs"
 
-data_folder = "26-09-24 Kirill single plasmid control" #path to where to find the data
+data_folder = "26-10-01 YX002 diya test 2" #path to where to find the data
 save_filename_extra = "diya" #additional text in the saved filename
 #all of the files to parse
 data_files = ["t0.xlsx", 
              "t3.xlsx",
-             #"t6.xlsx",
-             #"t9.xlsx",
+             "t6.xlsx",
+             "t9.xlsx",
              "t12.xlsx",
+             "t15.xlsx",
              "t24.xlsx",
-             "t28.xlsx",
+             #"t28.xlsx",
              ]
 
 ##############
