@@ -1040,7 +1040,7 @@ alpha_map = {"2.8": 1,
 plot_exclude = {
     "cells":[
             #"media",
-             "JBL001",
+             #"JBL001",
              #"YX001",
              #"YX002",
 
@@ -1053,9 +1053,10 @@ plot_exclude = {
 }
 DefaultConfig.plot_exclude = plot_exclude
 DefaultConfig.line_color_map = line_color_map
-plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX comparison - no JBL001", save_image = True)
+#plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX comparison - no JBL001", save_image = True)
 
-#plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "all", title_extra= " ", save_image = False)
+plot_timecourse(sorted_data_df, summary_df, "GFP 395nm", "average", title_extra= " ", save_image = True)
 
 
 #plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", 5, title_extra= "t12 YX comparison", save_image = True)
+plot_by_intensity(sorted_data_df, summary_df, "GFP 395nm", "average", 5, title_extra= "t12", save_image = True)

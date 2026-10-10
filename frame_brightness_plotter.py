@@ -11,7 +11,7 @@ from pathlib import Path
 #===================================================================================#
 #Headers are LED,FOV,Frame,Mean_Brightness,Median_Brightness
 
-filepath = '26-09-25 frame brightness mm/frame_brightness.csv'
+filepath = '26-09-25 frame brightness mm/frame_brightness_top_5_pixels.csv'
 light_regime_auto = True
 light_regime_custom = {"green" : [0,1,2,3,4,5],
                     "dark" : [6,7,8,9,10,11],
