@@ -16,18 +16,18 @@ headers = [
     "Pump 2 rate",
     "Pump 3 rate",
     "Pump 4 rate",
-    "Volume",
+    "Media volume",
     "Stirring rate",
     "395nm LED set-point",
-    "?1",
-    "?2",
-    "?3",
     "457nm LED set-point",
     "500nm LED set-point",
     "523nm LED set-point",
     "595nm LED set-point",
     "623nm LED set-point",
     "6500K LED set-point",
+    "600nm LED set-point",
+    "550nm LED set-point",
+    "White LED set-point",
     "Laser set-point",
     "UV LED intensity",
     "Fluorescent protein 1 baseband",
@@ -46,6 +46,51 @@ headers = [
     "Zigzag target",
     "Growth rate",
 ]
+
+### Actual headers of the csv ###
+# exp_time
+# od_measured
+# od_setpoint
+# od_zero_setpoint
+# thermostat_setpoint
+# heating_rate
+# internal_air_temp
+# external_air_temp
+# media_temp
+# opt_gen_act_int,
+# pump_1_rate,
+# pump_2_rate,
+# pump_3_rate,
+# pump_4_rate,
+# media_vol,
+# stirring_rate,
+# LED_395nm_setpoint,
+# LED_457nm_setpoint,
+# LED_500nm_setpoint,
+# LED_523nm_setpoint,
+# LED_595nm_setpoint,
+# LED_623nm_setpoint,
+# LED_6500K_setpoint,
+# LED_600nm_setpoint,
+# LED_550nm_setpoint,
+# LED_White_setpoint,
+# laser_setpoint,
+# LED_UV_int,
+# FP1_base,
+# FP1_emit1,
+# FP1_emit2,
+# FP2_base,
+# FP2_emit1,
+# FP2_emit2,
+# FP3_base,
+# FP3_emit1,
+# FP3_emit2,
+# custom_prog_param1,
+# custom_prog_param2,
+# custom_prog_param3,
+# custom_prog_status,
+# zigzag_target,
+# growth_rate
 
 def plot_timecourse(chosen_data_df, columns, title = "", ylabel = "", xlabel = "", time_step = "hr", slice = None, LED_periods = None):
     
@@ -71,7 +116,7 @@ def plot_timecourse(chosen_data_df, columns, title = "", ylabel = "", xlabel = "
     
     plt.show()
 
-filepath = "26-02-05_chi_bio_JBL137_1/2026-01-30 15_46_01_M0_data.csv"
+filepath = "26-09-25 Kirill single plasmid chi bio/2026-09-25 09_01_45_M0_data.csv"
 data_df = pd.read_csv(filepath, names = headers, index_col= False)
 print(data_df)
 

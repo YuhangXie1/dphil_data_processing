@@ -16,6 +16,196 @@ from matplotlib.lines import Line2D
 from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
+NCOLS = 12
+NROWS = 8
+
+### USER VARIABLES ###
+
+#copy and paste the light array
+
+DEFAULT_OPTICAL_POWER = np.array([
+
+    # Channel 0 (Color 0 or 4). Blue on v0.4c
+    [[0 / (2**(7-row)) for col in range(NCOLS)] for row in range(NROWS)],
+
+    # Channel 1 – Green light
+    np.array([
+        # Columns 1–12 (A–L), Rows A–H
+        [0.0,		0.56,   	1.4,    	0.028,	0.56,	0.028,  0.0,    1.4,	0.56,   0.28,   0.0,	0.028],  # Row A
+        [0.028,  	1.4,  		0.56,  		0.0,	1.4,  	0.0,  	0.56,	0.028,  0.28,  	0.028,	1.4,  	0.56],  # Row B
+        [0.28,  	0.28,  		0.0,  		0.28,	0.028,  1.4,  	0.28,  	0.56,  	1.4,  	0.0,  	0.56,  	0.28],  # Row C
+        [1.4,		0.028,  	0.028,    	1.4,	0.0,	0.56,  	0.028,  0.0,	0.028,  0.56,   0.28,	1.4],  # Row D
+        [0.56,  	0.0,  		0.28,  		0.56,	0.28,  	0.28,  	1.4, 	0.28,  	0.0,  	1.4,    0.028,  0.0],  # Row E
+        [0.56,		0.0,    	0.0,    	0.28,	0.028,	0.56,   1.4,  	0.56,	1.4,    0.0,  	0.56,	0.028],  # Row F
+        [0.028,		0.28,    	0.028,  	1.4,	0.28,	1.4,    0.0, 	1.4,	0.56,   0.56,  	1.4,	0.0],  # Row G
+        [0.56,		0.56,    	0.28,    	0.028,	0.0,    0.28,   0.28,   0.028,  0.56,   0.0,    0.0,    0.0],  # Row H
+    ]),
+    # Channel 2 (Color 2 or 6). Yellow-Green or White on v0.4c
+    [[0 / (2**row) for col in range(NCOLS)] for row in range(NROWS)],    
+
+    # Channel 3 – Red light
+    np.array([
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row A
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row B
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row C
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row D
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row E
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row F
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row G
+        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row H
+    ])
+])
+
+#plate map for cell type
+class Cells(Enum):
+    media = 0
+    JBL001 = 1
+    YX001 = 2
+    YX002 = 3
+
+class Rows(Enum):
+    A = 0
+    B = 1
+    C = 2
+    D = 3
+    E = 4
+    F = 5
+    G = 6
+    H = 7
+
+medium = {
+    0: "LB",
+    1: "WM-met+",
+    2: "WM-met-",
+}
+
+
+cell_map = np.array([
+        #1      2       3       4       5       6       7       8       9       10      11      12
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row A
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row B
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row C
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row D
+        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row E
+        [2,	    3,	    1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,  	3,      1],  # Row F
+        [2,	    3,	    1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,  	3,      1],  # Row G
+        [0,	    0,	    1,  	2,  	3,  	1,  	2,  	3,  	0,  	0,  	0,      0],  # Row H
+])
+
+media_map = np.array([
+        #1      2       3       4       5       6       7       8       9       10      11      12
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row A
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row B
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row C
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row D
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row E
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row F
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row G
+        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row H
+])
+
+### MAIN ###
+
+def main():
+    #Use the extracted_combined file from plate_reader_extraction script to get the right format
+    filepath = "26-10-01 YX002 diya test 2/26-10-01 YX002 diya test 2_diya_extracted_combined.csv"
+    DefaultConfig.save_file_path = filepath.split("/")[0]
+
+    plate_map = populate_plate_map(DEFAULT_OPTICAL_POWER, cell_map, media_map)
+    sorted_data_df, summary_df = load_data(filepath, plate_map)
+
+
+    # Color and style map
+    style_map = {
+        "marker_style":{
+            "o":[]
+        },
+        "marker_color":{},
+        "line_style":{},
+        "line_color":{},
+
+    }
+
+
+    #custom color and linestyles
+    #marker style and color
+    markerstyle_map = {"JBL001":"s",      
+                        "YX001":"o",
+                        "YX002":"s",
+                        "media":"^",
+    }
+
+    markercolor_map = {"JBL001":"black",      
+                        "YX001":"blue",
+                        "YX002":"blue",
+                        "media":"black",
+    }
+
+    #linestyle 
+    linestyle_map = {"WM-met+": "solid",
+                    "WM-met-": "dashed",
+    }
+
+    plot_exclude = {
+        "cells":[],
+        "media":[],
+        "green_intensity":["0.0","1.4","0.56","0.028"],
+        "red_intensity":[],
+    }
+
+    #od600 - average
+    line_color_map = {2.8: (0.0,1.0,0.0),
+                1.4: (0.5,0.5,0.0),
+                0.56:(0.6,0.4,0.0),
+                0.28:(0.0,1.0,0.0),
+                0.028:(0.0,1.0,0.0),
+                0.0:(1.0,0.0,0.0),
+    }
+
+
+    alpha_map = {"2.8": 1,
+                    "2.52": 0.95,
+                    "2.24": 0.9,
+                    "1.96": 0.8,
+                    "1.68": 0.7,
+                    "1.4": 0.6,
+                    "1.12":0.5,
+                    "0.84":0.4,
+                    "0.56":0.3,
+                    "0.28":0.2,
+                    "0":0.1,
+    }
+
+
+    plot_exclude = {
+        "cells":[
+                #"media",
+                #"JBL001",
+                #"YX001",
+                #"YX002",
+
+                ],
+        "media":[],
+        "green_intensity":[1.4,0.56,0.028],
+        #"green_intensity":[2.8,1.4,0.56,0.028],
+        #"green_intensity":[],
+        "red_intensity":[],
+    }
+    DefaultConfig.plot_exclude = plot_exclude
+    DefaultConfig.line_color_map = line_color_map
+    #plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX comparison - no JBL001", save_image = True)
+
+    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm", "average", title_extra= " ", save_image = False)
+
+
+    #plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", 5, title_extra= "t12 YX comparison", save_image = True)
+    plot_by_intensity(sorted_data_df, summary_df, "GFP 395nm", "average", 5, title_extra= "t12", save_image = False)
+
+
+
+
+
+
 
 #Defining default config
 @dataclass
@@ -145,7 +335,7 @@ def create_plot_handles(config: PlotConfig):
 
     return cell_handles, intensity_handles, media_handles
 
-def load_data(filepath):
+def load_data(filepath, plate_map):
     
     #initialises columns of dataframe
     columns = [
@@ -838,225 +1028,42 @@ def plot_timecourse_custom(dataframe, y_data, plot_type, ylabel: str | None = No
         plt.close(fig)
 
 def populate_plate_map(optical_power_map, cell_map, media_map):
-    pass
+    key_rows = ["A", "B", "C", "D", "E", "F", "G", "H"]
+    key_columns = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    key_wells = [str(row)+str(col) for row in key_rows for col in key_columns]
+    plate_map = {key : [] for key in key_wells}
 
-key_rows = ["A", "B", "C", "D", "E", "F", "G", "H"]
-key_columns = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-key_wells = [str(row)+str(col) for row in key_rows for col in key_columns]
-plate_map = {key : [] for key in key_wells}
+    #placing cell names into arrays in the plate_map
+    for row in range(0,len(cell_map)):
+        row_letter = Rows(row).name
+        for index in range(0,len(cell_map[row])):
+            plate_map[str(row_letter) + str(index+1)].append(Cells(cell_map[row][index]).name)
 
-NCOLS = 12
-NROWS = 8
-### MAIN ###
+    #doing the same for media
+    for row in range(0,len(media_map)):
+        row_letter = Rows(row).name
+        for index in range(0,len(media_map[row])):
+            plate_map[str(row_letter) + str(index+1)].append(medium[media_map[row][index]])
 
-#copy and paste the light array
+    #doing the same for the color intensities
+    green_array = optical_power_map[1]
+    for row in range(0,len(green_array)):
+        row_letter = Rows(row).name
+        for index in range(0,len(green_array[row])):
+            plate_map[str(row_letter) + str(index+1)].append(green_array[row][index])
 
-DEFAULT_OPTICAL_POWER = np.array([
+    red_array = optical_power_map[3]
+    for row in range(0,len(red_array)):
+        row_letter = Rows(row).name
+        for index in range(0,len(red_array[row])):
+            plate_map[str(row_letter) + str(index+1)].append(red_array[row][index])
 
-	# Channel 0 (Color 0 or 4). Blue on v0.4c
-	[[0 / (2**(7-row)) for col in range(NCOLS)] for row in range(NROWS)],
+    #making a concatinated string name for easy accessing
+    for key, item in plate_map.items():
+        plate_map[key].append("_".join(map(str, item)))
 
-    # Channel 1 – Green light
-    np.array([
-        # Columns 1–12 (A–L), Rows A–H
-        [0.0,		0.56,   	1.4,    	0.028,	0.56,	0.028,  0.0,    1.4,	0.56,   0.28,   0.0,	0.028],  # Row A
-        [0.028,  	1.4,  		0.56,  		0.0,	1.4,  	0.0,  	0.56,	0.028,  0.28,  	0.028,	1.4,  	0.56],  # Row B
-        [0.28,  	0.28,  		0.0,  		0.28,	0.028,  1.4,  	0.28,  	0.56,  	1.4,  	0.0,  	0.56,  	0.28],  # Row C
-        [1.4,		0.028,  	0.028,    	1.4,	0.0,	0.56,  	0.028,  0.0,	0.028,  0.56,   0.28,	1.4],  # Row D
-        [0.56,  	0.0,  		0.28,  		0.56,	0.28,  	0.28,  	1.4, 	0.28,  	0.0,  	1.4,    0.028,  0.0],  # Row E
-        [0.56,		0.0,    	0.0,    	0.28,	0.028,	0.56,   1.4,  	0.56,	1.4,    0.0,  	0.56,	0.028],  # Row F
-        [0.028,		0.28,    	0.028,  	1.4,	0.28,	1.4,    0.0, 	1.4,	0.56,   0.56,  	1.4,	0.0],  # Row G
-        [0.56,		0.56,    	0.28,    	0.028,	0.0,    0.28,   0.28,   0.028,  0.56,   0.0,    0.0,    0.0],  # Row H
-    ]),
-	# Channel 2 (Color 2 or 6). Yellow-Green or White on v0.4c
-	[[0 / (2**row) for col in range(NCOLS)] for row in range(NROWS)],    
-
-    # Channel 3 – Red light
-    np.array([
-        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row A
-        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row B
-        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row C
-        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row D
-        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row E
-        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row F
-        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row G
-        [2.8,	2.8,	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,  	2.8,    2.8],  # Row H
-    ])
-])
-
-#plate map for cell type
-class Cells(Enum):
-    media = 0
-    JBL001 = 1
-    YX001 = 2
-    YX002 = 3
-
-class Rows(Enum):
-    A = 0
-    B = 1
-    C = 2
-    D = 3
-    E = 4
-    F = 5
-    G = 6
-    H = 7
-
-medium = {
-    0: "LB",
-    1: "WM-met+",
-    2: "WM-met-",
-}
+    return plate_map
 
 
-cell_map = np.array([
-        #1      2       3       4       5       6       7       8       9       10      11      12
-        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row A
-        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row B
-        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row C
-        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row D
-        [1,	    2,	    3,  	1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,      3],  # Row E
-        [2,	    3,	    1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,  	3,      1],  # Row F
-        [2,	    3,	    1,  	2,  	3,  	1,  	2,  	3,  	1,  	2,  	3,      1],  # Row G
-        [0,	    0,	    1,  	2,  	3,  	1,  	2,  	3,  	0,  	0,  	0,      0],  # Row H
-])
-
-media_map = np.array([
-        #1      2       3       4       5       6       7       8       9       10      11      12
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row A
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row B
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row C
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row D
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row E
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row F
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row G
-        [1,	    2,	    1,  	2,  	1,  	2,  	1,  	2,  	1,  	2,  	1,      2],  # Row H
-])
-
-#turn light array into labels - need to code
-plate_map_new = {key : np.nan for key in key_wells}
-
-#placing cell names into arrays in the plate_map
-for row in range(0,len(cell_map)):
-    row_letter = Rows(row).name
-    for index in range(0,len(cell_map[row])):
-        plate_map[str(row_letter) + str(index+1)].append(Cells(cell_map[row][index]).name)
-
-#doing the same for media
-for row in range(0,len(media_map)):
-    row_letter = Rows(row).name
-    for index in range(0,len(media_map[row])):
-        plate_map[str(row_letter) + str(index+1)].append(medium[media_map[row][index]])
-
-#doing the same for the color intensities
-green_array = DEFAULT_OPTICAL_POWER[1]
-for row in range(0,len(green_array)):
-    row_letter = Rows(row).name
-    for index in range(0,len(green_array[row])):
-        plate_map[str(row_letter) + str(index+1)].append(green_array[row][index])
-
-red_array = DEFAULT_OPTICAL_POWER[3]
-for row in range(0,len(red_array)):
-    row_letter = Rows(row).name
-    for index in range(0,len(red_array[row])):
-        plate_map[str(row_letter) + str(index+1)].append(red_array[row][index])
-
-#making a concatinated string name for easy accessing
-for key, item in plate_map.items():
-    plate_map[key].append("_".join(map(str, item)))
-
-
-
-
-
-#Use the extracted_combined file from plate_reader_extraction script to get the right format
-filepath = "26-10-01 YX002 diya test 2/26-10-01 YX002 diya test 2_diya_extracted_combined.csv"
-DefaultConfig.save_file_path = filepath.split("/")[0]
-
-sorted_data_df, summary_df = load_data(filepath)
-
-
-# Color and style map
-style_map = {
-    "marker_style":{
-        "o":[]
-    },
-    "marker_color":{},
-    "line_style":{},
-    "line_color":{},
-
-}
-
-
-#custom color and linestyles
-#marker style and color
-markerstyle_map = {"JBL001":"s",      
-                    "YX001":"o",
-                    "YX002":"s",
-                    "media":"^",
-}
-
-markercolor_map = {"JBL001":"black",      
-                    "YX001":"blue",
-                    "YX002":"blue",
-                    "media":"black",
-}
-
-#linestyle 
-linestyle_map = {"WM-met+": "solid",
-                 "WM-met-": "dashed",
-}
-
-plot_exclude = {
-    "cells":[],
-    "media":[],
-    "green_intensity":["0.0","1.4","0.56","0.028"],
-    "red_intensity":[],
-}
-
-#od600 - average
-line_color_map = {2.8: (0.0,1.0,0.0),
-             1.4: (0.5,0.5,0.0),
-             0.56:(0.6,0.4,0.0),
-             0.28:(0.0,1.0,0.0),
-             0.028:(0.0,1.0,0.0),
-             0.0:(1.0,0.0,0.0),
-}
-
-
-alpha_map = {"2.8": 1,
-                 "2.52": 0.95,
-                 "2.24": 0.9,
-                 "1.96": 0.8,
-                 "1.68": 0.7,
-                 "1.4": 0.6,
-                 "1.12":0.5,
-                 "0.84":0.4,
-                 "0.56":0.3,
-                 "0.28":0.2,
-                 "0":0.1,
-}
-
-
-plot_exclude = {
-    "cells":[
-            #"media",
-             #"JBL001",
-             #"YX001",
-             #"YX002",
-
-             ],
-    "media":[],
-    "green_intensity":[1.4,0.56,0.028],
-    #"green_intensity":[2.8,1.4,0.56,0.028],
-    #"green_intensity":[],
-    "red_intensity":[],
-}
-DefaultConfig.plot_exclude = plot_exclude
-DefaultConfig.line_color_map = line_color_map
-#plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX comparison - no JBL001", save_image = True)
-
-plot_timecourse(sorted_data_df, summary_df, "GFP 395nm", "average", title_extra= " ", save_image = True)
-
-
-#plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", 5, title_extra= "t12 YX comparison", save_image = True)
-plot_by_intensity(sorted_data_df, summary_df, "GFP 395nm", "average", 5, title_extra= "t12", save_image = True)
+if __name__ == "__main__":
+    main()
