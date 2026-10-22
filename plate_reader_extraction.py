@@ -92,8 +92,8 @@ all_plate_table_df = {}
 
 chosen_plate_reader = "downstairs" #choose "downstairs" or "upstairs"
 
-data_folder = "26-10-01 YX002 diya test 2" #path to where to find the data
-save_filename_extra = "diya" #additional text in the saved filename
+data_folder = "26-10-21 Kirill M9" #path to where to find the data
+save_filename_extra = "incubator" #additional text in the saved filename
 #all of the files to parse
 data_files = ["t0.xlsx", 
              "t3.xlsx",
@@ -104,6 +104,8 @@ data_files = ["t0.xlsx",
              "t24.xlsx",
              #"t28.xlsx",
              ]
+
+data_files = ["incubator t24.xlsx",]
 
 ##############
 

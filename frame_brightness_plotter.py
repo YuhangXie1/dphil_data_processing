@@ -11,7 +11,7 @@ from pathlib import Path
 #===================================================================================#
 #Headers are LED,FOV,Frame,Mean_Brightness,Median_Brightness
 
-filepath = '26-09-25 frame brightness mm/frame_brightness_top_5_pixels.csv'
+filepath = '26-10-12 YX001 wmmet- frame brightness/frame_brightness_top_100_pixels.csv'
 light_regime_auto = True
 light_regime_custom = {"green" : [0,1,2,3,4,5],
                     "dark" : [6,7,8,9,10,11],
@@ -22,13 +22,13 @@ light_regime_custom = {"green" : [0,1,2,3,4,5],
 def main(filepath):
     dataframe = pd.read_csv(filepath, header = 0, index_col= None)
     
-    plot_exclude = {"fov": [19],
+    plot_exclude = {"fov": [],
                     "light_regime": []}
 
     
     DefaultConfig.plot_exclude = plot_exclude
     plot_brightness_by_frame(dataframe, "LED450NM")
-    plot_diff_by_fov(dataframe, "LED450NM")
+    plot_diff_by_fov(dataframe, "LED450NM", calculations = ("Max - start", "End - start", "End mean - start"), robust_max=True, max_window=3)
     
 
 
@@ -324,13 +324,52 @@ def plot_diff_by_fov(
         title=None,
         config: PlotConfig = DefaultConfig,
         save_image=False,
+
+        # Number of frames to average for start/end
+        start_period=3,
         end_period=10,
+
+        # Choose which bars to plot
+        calculations=("Max - start", "End - start", "End mean - start"),
+
+        # If True, max is calculated from a rolling mean,
+        # preventing a single-frame spike from dominating
+        robust_max=False,
+        max_window=3,
     ):
 
-    # ------------------------------------------------------------
-    # Filter data and assign each FOV its light regime
-    # ------------------------------------------------------------
+    # ============================================================
+    # Validate selected calculations
+    # ============================================================
+
+    valid_calculations = {
+        "Max - start",
+        "End - start",
+        "End mean - start",
+    }
+
+    invalid = set(calculations) - valid_calculations
+
+    if invalid:
+        raise ValueError(
+            f"Unknown calculations: {invalid}. "
+            f"Choose from {valid_calculations}"
+        )
+
+    if len(calculations) == 0:
+        raise ValueError("At least one calculation must be selected.")
+
+
+    # ============================================================
+    # Filter by LED
+    # ============================================================
+
     dataframe = dataframe.loc[dataframe["LED"] == LED].copy()
+
+
+    # ============================================================
+    # Assign light regime to each FOV
+    # ============================================================
 
     dataframe = add_light_regime_to_dataframe(
         dataframe,
@@ -338,214 +377,435 @@ def plot_diff_by_fov(
         light_regime_custom=config.light_regime
     )
 
-    # ------------------------------------------------------------
-    # Collect the three brightness-difference calculations
-    # ------------------------------------------------------------
+
+    # ============================================================
+    # Calculate brightness changes for each FOV
+    # ============================================================
+
     results = []
 
     for fov, group in dataframe.groupby("FOV"):
 
         light_regime = group["light_regime"].iloc[0]
 
+        # Apply exclusions
         if (
             fov in config.plot_exclude["fov"]
             or light_regime in config.plot_exclude["light_regime"]
         ):
             continue
 
-        # Make sure frames are in the correct order
+
+        # --------------------------------------------------------
+        # Make sure frames are in chronological order
+        # --------------------------------------------------------
+
         group = group.sort_values("Frame")
 
         brightness = group["Mean_Brightness"]
 
-        bright_min = brightness.min()
-        bright_max = brightness.max()
+
+        # --------------------------------------------------------
+        # START BRIGHTNESS
+        #
+        # Average first N frames.
+        #
+        # start_period = 1:
+        #     use first frame only
+        #
+        # start_period = 3:
+        #     average first 3 frames
+        # --------------------------------------------------------
+
+        bright_start = brightness.iloc[:start_period].mean()
+
+
+        # --------------------------------------------------------
+        # MAXIMUM BRIGHTNESS
+        # --------------------------------------------------------
+
+        if robust_max:
+
+            # Smooth brightness using a rolling mean.
+            #
+            # This prevents one abnormally high frame from
+            # determining the maximum.
+            #
+            # Example:
+            #
+            # 100, 102, 101, 500, 103, 104
+            #
+            # The 500-frame spike is reduced because the maximum
+            # is taken after averaging neighbouring frames.
+
+            smoothed_brightness = brightness.rolling(
+                window=max_window,
+                center=True,
+                min_periods=1
+            ).mean()
+
+            bright_max = smoothed_brightness.max()
+
+        else:
+
+            # Literal maximum frame brightness
+            bright_max = brightness.max()
+
+
+        # --------------------------------------------------------
+        # END BRIGHTNESS
+        # --------------------------------------------------------
+
+        # Final frame
         bright_end = brightness.iloc[-1]
 
-        # Average of final N frames
+
+        # Average final N frames
         bright_end_average = brightness.iloc[-end_period:].mean()
 
+
+        # --------------------------------------------------------
+        # Calculate changes relative to START brightness
+        # --------------------------------------------------------
+
         results.append({
+
             "FOV": fov,
+
             "light_regime": light_regime,
 
-            # Calculation 1
-            "Max - min": bright_max - bright_min,
+            "Max - start":
+                bright_max - bright_start,
 
-            # Calculation 2
-            "End - min": bright_end - bright_min,
+            "End - start":
+                bright_end - bright_start,
 
-            # Calculation 3
-            "End mean - min": bright_end_average - bright_min,
+            "End mean - start":
+                bright_end_average - bright_start,
+
         })
 
-    results = pd.DataFrame(results).sort_values("FOV")
+
+    # Convert collected results into DataFrame
+    results = pd.DataFrame(results)
+
+    if results.empty:
+        print("No FOVs available to plot.")
+        return
+
+    results = results.sort_values("FOV")
 
 
-    # ------------------------------------------------------------
+    # ============================================================
     # Colours
     #
-    # Each regime keeps its overall colour:
-    #   green -> shades of green
-    #   dark  -> shades of grey
-    #   red   -> shades of red
-    #
-    # Within each regime, each calculation gets a different shade.
-    # ------------------------------------------------------------
+    # Light regime determines colour family.
+    # Calculation determines shade.
+    # ============================================================
+
     colour_map = {
+
         "green": {
-            "Max - min":      "#006d2c",
-            "End - min":      "#31a354",
-            "End mean - min": "#a1d99b",
+
+            "Max - start":
+                "#006d2c",
+
+            "End - start":
+                "#31a354",
+
+            "End mean - start":
+                "#a1d99b",
         },
+
 
         "dark": {
-            "Max - min":      "#252525",
-            "End - min":      "#737373",
-            "End mean - min": "#bdbdbd",
+
+            "Max - start":
+                "#252525",
+
+            "End - start":
+                "#737373",
+
+            "End mean - start":
+                "#bdbdbd",
         },
 
+
         "red": {
-            "Max - min":      "#a50f15",
-            "End - min":      "#de2d26",
-            "End mean - min": "#fb6a4a",
+
+            "Max - start":
+                "#a50f15",
+
+            "End - start":
+                "#de2d26",
+
+            "End mean - start":
+                "#fb6a4a",
         },
     }
 
 
-    # ------------------------------------------------------------
-    # Plot clustered bars
-    # ------------------------------------------------------------
+    # ============================================================
+    # Create plot
+    # ============================================================
+
     fig, ax = plt.subplots(figsize=(12, 6))
 
+
+    # One x-position for each FOV
     x = np.arange(len(results))
 
-    bar_width = 0.25
 
-    calculations = [
-        "Max - min",
-        "End - min",
-        "End mean - min",
-    ]
+    # ------------------------------------------------------------
+    # Automatically calculate bar width
+    #
+    # This means:
+    #
+    # 1 calculation  -> one centred wide bar
+    # 2 calculations -> two centred bars
+    # 3 calculations -> three centred bars
+    # ------------------------------------------------------------
 
-    offsets = [
-        -bar_width,
-        0,
-        bar_width,
-    ]
+    total_cluster_width = 0.75
+
+    bar_width = total_cluster_width / len(calculations)
+
+
+    # Calculate offsets so the whole cluster remains centred
+    # on the FOV tick.
+
+    offsets = (
+        np.arange(len(calculations))
+        - (len(calculations) - 1) / 2
+    ) * bar_width
+
+
+    # ============================================================
+    # Plot selected calculations
+    # ============================================================
 
     for calculation, offset in zip(calculations, offsets):
 
         colours = [
+
             colour_map[regime][calculation]
+
             for regime in results["light_regime"]
         ]
 
+
         ax.bar(
+
             x + offset,
+
             results[calculation],
-            width=bar_width,
+
+            width=bar_width * 0.9,
+
             color=colours,
+
             edgecolor="black",
+
             linewidth=0.5,
+
         )
 
 
-    # ------------------------------------------------------------
+    # ============================================================
     # Axis formatting
-    # ------------------------------------------------------------
+    # ============================================================
+
     ax.set_xticks(x)
+
     ax.set_xticklabels(results["FOV"])
 
+
     ax.set_xlabel("FOV")
+
     ax.set_ylabel(ylabel)
 
+
     if title is None:
+
         title = f"Change in mean pixel brightness by FOV - {LED}"
+
+        if robust_max and "Max - start" in calculations:
+
+            title += (
+                f" (max = {max_window}-frame rolling mean)"
+            )
+
 
     ax.set_title(title)
 
-    # Useful when some differences are negative
-    ax.axhline(0, color="black", linewidth=0.8)
+
+    # Zero reference line
+    ax.axhline(
+        0,
+        color="black",
+        linewidth=0.8
+    )
 
 
-    # ------------------------------------------------------------
-    # Legend 1: calculation type
-    #
-    # Grey example bars are used because the actual colour depends
-    # on the FOV's light regime.
-    # ------------------------------------------------------------
+    # ============================================================
+    # Calculation legend
+    # ============================================================
+
+    grey_shades = {
+
+        "Max - start":
+            "#252525",
+
+        "End - start":
+            "#737373",
+
+        "End mean - start":
+            "#bdbdbd",
+    }
+
+
     calculation_handles = [
+
         plt.Rectangle(
-            (0, 0), 1, 1,
-            facecolor=colour,
+
+            (0, 0),
+
+            1,
+
+            1,
+
+            facecolor=grey_shades[calculation],
+
             edgecolor="black",
-            label=label
+
+            label=calculation
+
         )
-        for colour, label in zip(
-            ["#252525", "#737373", "#bdbdbd"],
-            calculations
-        )
+
+        for calculation in calculations
+
     ]
 
+
     calculation_legend = ax.legend(
+
         handles=calculation_handles,
+
         title="Calculation",
+
         loc="upper left",
+
         bbox_to_anchor=(1.02, 1.0),
+
     )
+
 
     ax.add_artist(calculation_legend)
 
 
-    # ------------------------------------------------------------
-    # Legend 2: light regime
-    # ------------------------------------------------------------
+    # ============================================================
+    # Light regime legend
+    # ============================================================
+
+    # Use the first selected calculation as the representative
+    # colour shade for each regime.
+
+    representative_calculation = calculations[0]
+
+
     regime_handles = [
+
         plt.Rectangle(
-            (0, 0), 1, 1,
-            facecolor=colour_map[regime]["End - min"],
+
+            (0, 0),
+
+            1,
+
+            1,
+
+            facecolor=colour_map[regime][representative_calculation],
+
             edgecolor="black",
+
             label=regime
+
         )
+
         for regime in ["green", "dark", "red"]
+
     ]
 
+
     ax.legend(
+
         handles=regime_handles,
+
         title="Light regime",
+
         loc="upper left",
+
         bbox_to_anchor=(1.02, 0.68),
+
     )
 
 
-    fig.tight_layout(rect=[0, 0, 0.82, 1])
+    # Leave room for legends
+    fig.tight_layout(
+        rect=[0, 0, 0.82, 1]
+    )
 
 
-    # ------------------------------------------------------------
-    # Save or show
-    # ------------------------------------------------------------
+    # ============================================================
+    # Save or display
+    # ============================================================
+
     if save_image:
 
         try:
-            figure_dir = Path(config.save_file_path) / "figures"
-            figure_dir.mkdir(parents=True, exist_ok=True)
 
-            save_title = title.replace("/", "_div_")
+            figure_dir = (
+                Path(config.save_file_path)
+                / "figures"
+            )
+
+            figure_dir.mkdir(
+                parents=True,
+                exist_ok=True
+            )
+
+
+            save_title = title.replace(
+                "/",
+                "_div_"
+            )
+
 
             plt.savefig(
-                figure_dir / f"{save_title}.png",
+
+                figure_dir
+                / f"{save_title}.png",
+
                 dpi=300,
+
                 bbox_inches="tight"
+
             )
+
 
             plt.close(fig)
 
+
         except Exception as e:
-            print(f"Could not save image: {e}")
+
+            print(
+                f"Could not save image: {e}"
+            )
+
 
     else:
+
         plt.show()
+
         plt.close(fig)
 
 if __name__ == "__main__":
