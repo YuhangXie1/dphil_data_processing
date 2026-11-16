@@ -13,11 +13,10 @@ from pathlib import Path
 
 filepath = '26-11-02 Scott exp 3/frame_brightness_top_100_pixels_full_image.csv'
 light_regime_auto = True
-light_regime_custom = {"green" : [0,1,2,3,4,5],
+"""light_regime_custom = {"green" : [0,1,2,3,4,5],
                     "dark" : [6,7,8,9,10,11],
-                    "red" : [12,13,14,15,16,17],}
-
-
+                    "red" : [12,13,14,15,16,17],}"""
+light_regime_custom = {"dark" : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]}
 
 def main(filepath):
     dataframe = pd.read_csv(filepath, header = 0, index_col= None)
@@ -25,8 +24,9 @@ def main(filepath):
     plot_exclude = {"fov": [21],
                     "light_regime": []}
 
-    
+    DefaultConfig.light_regime_auto = light_regime_auto
     DefaultConfig.plot_exclude = plot_exclude
+    
     plot_brightness_by_time(dataframe, "LED450NM")
     #plot_diff_by_5fov(dataframe, "LED450NM", calculations = ("Max - start", "End - start", "End mean - start"), robust_max=True, max_window=3)
     
