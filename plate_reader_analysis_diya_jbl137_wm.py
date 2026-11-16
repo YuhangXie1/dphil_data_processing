@@ -116,8 +116,8 @@ def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_c
     DefaultConfig.line_color_map = line_color_map
 
     #plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX comparison - no JBL001", save_image = True)
-    plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= " ", save_image = True)
-    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= " ", save_image = True)
+    plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= " ", save_image = False)
+    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= " ", save_image = False)
     
 
     #plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", 5, title_extra= "t12 YX comparison", save_image = True)
@@ -137,7 +137,7 @@ def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_c
             "red_intensity":[],
         }
     DefaultConfig.plot_exclude = plot_exclude
-    plot_by_intensity(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", 5, title_extra= "t12", save_image = True)
+    plot_by_intensity(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", 5, title_extra= "t12", save_image = False)
     
     line_color_map = {1.4: (0.0,1.0,0.0),
                     0.56: (0.3,0.7,0.0),
@@ -162,10 +162,10 @@ def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_c
             "red_intensity":[],
         }
     DefaultConfig.line_color_map = line_color_map
-    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison", save_image = True)
+    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison", save_image = False)
     
     DefaultConfig.plot_exclude = plot_exclude
-    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison, green vs red only", save_image = True)
+    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison, green vs red only", save_image = False)
 
 
 
