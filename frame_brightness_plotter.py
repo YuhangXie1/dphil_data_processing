@@ -11,7 +11,7 @@ from pathlib import Path
 #===================================================================================#
 #Headers are LED,FOV,Frame,Mean_Brightness,Median_Brightness
 
-filepath = '26-11-05 YX001 MM wmmet- exp3/frame_brightness_top_100_pixels_full_image.csv'
+filepath = '26-11-09 YX001 MM wmmet- exp4/frame_brightness_top_100_pixels_full_image.csv'
 light_regime_auto = True
 """light_regime_custom = {"green" : [0,1,2,3,4,5],
                     "dark" : [6,7,8,9,10,11],
@@ -21,13 +21,13 @@ light_regime_custom = {"dark" : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,
 def main(filepath):
     dataframe = pd.read_csv(filepath, header = 0, index_col= None)
     
-    plot_exclude = {"fov": [22],
+    plot_exclude = {"fov": [],
                     "light_regime": []}
 
     DefaultConfig.light_regime_auto = light_regime_auto
     DefaultConfig.plot_exclude = plot_exclude
     plot_brightness_by_frame(dataframe, "LED450NM")
-    plot_diff_by_fov(dataframe, "LED450NM", calculations = ("Max - start", "End - start", "End mean - start"), robust_max=True, max_window=3)
+    plot_diff_by_fov(dataframe, "LED450NM", calculations = ("Max - min", "End - min", "End mean - min"), robust_max=True, max_window=3)
 
     #plot_brightness_by_frame(dataframe, "LED565NM")
     #plot_diff_by_fov(dataframe, "LED565NM", calculations = ("Max - start", "End - start", "End mean - start"), robust_max=True, max_window=3)
@@ -327,12 +327,11 @@ def plot_diff_by_fov(
         config: PlotConfig = DefaultConfig,
         save_image=False,
 
-        # Number of frames to average for start/end
-        start_period=3,
-        end_period=10,
+        # Number of frames to average at the end
+                end_period=10,
 
         # Choose which bars to plot
-        calculations=("Max - start", "End - start", "End mean - start"),
+        calculations=("Max - min", "End - min", "End mean - min"),
 
         # If True, max is calculated from a rolling mean,
         # preventing a single-frame spike from dominating
@@ -345,6 +344,9 @@ def plot_diff_by_fov(
     # ============================================================
 
     valid_calculations = {
+        "Max - min",
+        "End - min",
+        "End mean - min",
         "Max - start",
         "End - start",
         "End mean - start",
@@ -407,20 +409,9 @@ def plot_diff_by_fov(
         brightness = group["Mean_Brightness"]
 
 
-        # --------------------------------------------------------
-        # START BRIGHTNESS
-        #
-        # Average first N frames.
-        #
-        # start_period = 1:
-        #     use first frame only
-        #
-        # start_period = 3:
-        #     average first 3 frames
-        # --------------------------------------------------------
-
-        bright_start = brightness.iloc[:start_period].mean()
-
+        # Minimum brightness across all frames
+        bright_min = brightness.min()
+        bright_start = brightness.iloc[0]
 
         # --------------------------------------------------------
         # MAXIMUM BRIGHTNESS
@@ -467,7 +458,7 @@ def plot_diff_by_fov(
 
 
         # --------------------------------------------------------
-        # Calculate changes relative to START brightness
+        # Calculate changes relative to MINIMUM or START brightness
         # --------------------------------------------------------
 
         results.append({
@@ -475,6 +466,15 @@ def plot_diff_by_fov(
             "FOV": fov,
 
             "light_regime": light_regime,
+
+            "Max - min":
+                bright_max - bright_min,
+
+            "End - min":
+                bright_end - bright_min,
+
+            "End mean - min":
+                bright_end_average - bright_min,
 
             "Max - start":
                 bright_max - bright_start,
@@ -509,11 +509,20 @@ def plot_diff_by_fov(
 
         "green": {
 
-            "Max - start":
+            "Max - min":
                 "#006d2c",
 
-            "End - start":
+            "End - min":
                 "#31a354",
+
+            "End mean - min":
+                "#a1d99b",
+
+            "Max - start":
+                "#31a354",
+
+            "End - start":
+                "#006d2c",
 
             "End mean - start":
                 "#a1d99b",
@@ -522,11 +531,20 @@ def plot_diff_by_fov(
 
         "dark": {
 
-            "Max - start":
+            "Max - min":
                 "#252525",
 
-            "End - start":
+            "End - min":
                 "#737373",
+
+            "End mean - min":
+                "#bdbdbd",
+
+            "Max - start":
+                "#737373",
+
+            "End - start":
+                "#252525",
 
             "End mean - start":
                 "#bdbdbd",
@@ -535,11 +553,20 @@ def plot_diff_by_fov(
 
         "red": {
 
-            "Max - start":
+            "Max - min":
                 "#a50f15",
 
-            "End - start":
+            "End - min":
                 "#de2d26",
+
+            "End mean - min":
+                "#fb6a4a",
+
+            "Max - start":
+                "#de2d26",
+
+            "End - start":
+                "#a50f15",
 
             "End mean - start":
                 "#fb6a4a",
@@ -631,7 +658,7 @@ def plot_diff_by_fov(
 
         title = f"Change in mean pixel brightness by FOV - {LED}"
 
-        if robust_max and "Max - start" in calculations:
+        if robust_max and ("Max - min" in calculations or "Max - start" in calculations):
 
             title += (
                 f" (max = {max_window}-frame rolling mean)"
@@ -655,11 +682,20 @@ def plot_diff_by_fov(
 
     grey_shades = {
 
-        "Max - start":
+        "Max - min":
             "#252525",
 
-        "End - start":
+        "End - min":
             "#737373",
+
+        "End mean - min":
+            "#bdbdbd",
+
+        "Max - start":
+            "#737373",
+
+        "End - start":
+            "#252525",
 
         "End mean - start":
             "#bdbdbd",
