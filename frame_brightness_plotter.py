@@ -319,6 +319,114 @@ def plot_brightness_by_frame(dataframe, LED, ylabel: str | None = None, title: s
         plt.show()
         plt.close(fig)
 
+def plot_brightness_by_time(dataframe, LED, ylabel: str | None = None, title: str | None = None, title_extra: str = "",
+                            xlabel = "Time (hrs)",
+                            config: PlotConfig = DefaultConfig, save_image = False,
+                           ):
+    """
+    Plots brightness over frames
+    
+    :param dataframe: dataframe where the data is (raw)
+    :param LED: LED to plot (e.g. 450nm)
+    :param ylabel: optional override for the ylabel text
+        :type ylabel: str | None
+    :param title: optional override for title text
+        :type title: str | None
+    :param title_extra: optional extra to tag onto the end of the title text
+        :type title_extra: str
+    :param xlabel: optional override for the xlabel text
+    :param config: config file for styling and saving the image
+        :type config: PlotConfig
+    :param save_image: if True, then image is saved instead of displayed
+    """
+
+    if ylabel is None:
+        ylabel = "Brightness (AU)"
+
+    if title is None:
+        title = f"Average pixel brightness over time - {title_extra}"
+    else:
+        title = title + " - " + title_extra
+
+    #slicing data
+    dataframe = dataframe.loc[dataframe["LED"] == LED].copy()
+    dataframe = add_light_regime_to_dataframe(dataframe)
+
+    fig, axs = plt.subplots()
+    for fov, group in dataframe.groupby("FOV"):
+        light_regime = group["light_regime"].iloc[0]
+        if (fov in config.plot_exclude["fov"] or light_regime in config.plot_exclude["light_regime"]):
+            continue
+        
+        group = group.copy()
+        group["Timestamp"] = pd.to_datetime(group["Timestamp"])
+        group = group.sort_values("Timestamp")
+
+        x = (group["Timestamp"] - group["Timestamp"].iloc[0]).dt.total_seconds() / 3600 #in hours
+        y = group["Mean_Brightness"]
+
+        axs.plot(x, y, color = config.line_color_map[light_regime],
+                    #linestyle = config.linestyle_map[fov],
+                    linewidth = 1.0,
+                    )
+        
+        light_regime_handle = [
+                Line2D(
+                    [], [], 
+                    color = config.line_color_map[light_regime],
+                    label = light_regime
+                )
+                for light_regime in config.line_color_map
+            ]
+
+        leg1 = axs.legend(
+                handles=light_regime_handle,
+                title="Light regime",
+                loc="upper left",
+                bbox_to_anchor=(1.02, 1.00),
+                borderaxespad=0.0,
+            )
+        axs.add_artist(leg1)
+
+        # FOV label at start
+        axs.annotate(
+            str(fov),
+            xy=(x.iloc[0], y.iloc[0]),
+            xytext=(-5, 0),
+            textcoords="offset points",
+            ha="right",
+            va="center",
+            fontsize = 6,
+        )
+
+        # FOV label at end
+        axs.annotate(
+            str(fov),
+            xy=(x.iloc[-1], y.iloc[-1]),
+            xytext=(5, 0),
+            textcoords="offset points",
+            ha="left",
+            va="center",
+            fontsize = 6,
+        )
+
+    axs.set_xlabel(xlabel)
+    axs.set_ylabel(ylabel)
+    axs.set_title(title)
+    fig.tight_layout(rect=[0, 0, 0.75, 1])
+
+    if save_image is True:
+        try:
+            Path(os.path.join(config.save_file_path, "figures")).mkdir(parents = True, exist_ok = True)
+            save_title = title.replace("/","_div_")
+            plt.savefig(os.path.join(config.save_file_path, "figures", f"{save_title}.png"))
+            plt.close(fig)
+        except:
+            print("Could not save image, filepath not valid")
+    else:
+        plt.show()
+        plt.close(fig)
+
 def plot_diff_by_fov(
         dataframe,
         LED,
