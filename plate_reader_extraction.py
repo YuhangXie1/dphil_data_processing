@@ -4,7 +4,51 @@ import pandas as pd
 from os import path
 
 
-#functions
+### User input ###
+chosen_plate_reader = "downstairs" #choose "downstairs" or "upstairs"
+
+data_folder = "26-11-19 Kirill M9 exp 2" #path to where to find the data
+save_filename_extra = "diya" #additional text in the saved filename
+#all of the files to parse
+data_files = ["t0.xlsx", 
+            "t3.xlsx",
+            "t6.xlsx",
+            "t8.xlsx",
+            "t12.xlsx",
+            "t15.xlsx",
+            "t24.xlsx",
+            #"t28.xlsx",
+            ]
+
+#data_files = ["incubator t24.xlsx",]
+
+##############
+
+def main():
+    save_filename_starter = data_folder
+
+    #extracting data
+    for filepath in data_files:
+        actual_filepath = path.join(data_folder, filepath)
+        if chosen_plate_reader == "downstairs":
+            extracted_data = read_data_from_excel_downstairs(actual_filepath)
+        elif chosen_plate_reader == "upstairs":
+            extracted_data = read_data_from_excel_upstairs(actual_filepath)
+        place_data_into_table(extracted_data)
+
+    #printing data
+    data_tables = {}
+    for key, table in all_plate_table_df.items():
+        #deleting first column which is place holder. Note does not update the tables in all_plate_table_df
+        new_table = table.drop(columns = "0")
+        new_table.to_csv(f"{data_folder}/{save_filename_starter}_{save_filename_extra}_extracted_{key}.csv")
+        data_tables[key] = new_table
+
+    combined_table = combine_data(data_tables)
+    combined_table.to_csv(f"{data_folder}/{save_filename_starter}_{save_filename_extra}_extracted_combined.csv")
+
+
+###functions###
 def read_data_from_excel_downstairs(filepath):
     #iterates through excel file and extracts all plate data in rows, but for downstairs (dungeon) plate reader format
     data = pd.read_excel(filepath, 0, header=None, engine="calamine")
@@ -86,47 +130,5 @@ plate_map = {key : np.nan for key in key_wells}
 plate_table_df = pd.DataFrame(0.0, index = key_wells, columns = ["0"])
 all_plate_table_df = {}
 
-
-
-### MAIN ###
-
-chosen_plate_reader = "downstairs" #choose "downstairs" or "upstairs"
-
-data_folder = "26-10-21 Kirill M9" #path to where to find the data
-save_filename_extra = "incubator" #additional text in the saved filename
-#all of the files to parse
-data_files = ["t0.xlsx", 
-             "t3.xlsx",
-             "t6.xlsx",
-             "t9.xlsx",
-             "t12.xlsx",
-             "t15.xlsx",
-             "t24.xlsx",
-             #"t28.xlsx",
-             ]
-
-data_files = ["incubator t24.xlsx",]
-
-##############
-
-save_filename_starter = data_folder
-
-#extracting data
-for filepath in data_files:
-    actual_filepath = path.join(data_folder, filepath)
-    if chosen_plate_reader == "downstairs":
-        extracted_data = read_data_from_excel_downstairs(actual_filepath)
-    elif chosen_plate_reader == "upstairs":
-        extracted_data = read_data_from_excel_upstairs(actual_filepath)
-    place_data_into_table(extracted_data)
-
-#printing data
-data_tables = {}
-for key, table in all_plate_table_df.items():
-    #deleting first column which is place holder. Note does not update the tables in all_plate_table_df
-    new_table = table.drop(columns = "0")
-    new_table.to_csv(f"{data_folder}/{save_filename_starter}_{save_filename_extra}_extracted_{key}.csv")
-    data_tables[key] = new_table
-
-combined_table = combine_data(data_tables)
-combined_table.to_csv(f"{data_folder}/{save_filename_starter}_{save_filename_extra}_extracted_combined.csv")
+if __name__ == "__main__":
+    main()

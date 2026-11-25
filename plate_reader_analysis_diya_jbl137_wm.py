@@ -14,48 +14,89 @@ from typing import Dict, Any
 
 ### USER VARIABLES ###
 
-### COPY AND PASTE STYLE MAPS ###
 ### HUMAN-READABLE CELL LABELS ###
 cell_label_map = {
-    'CS_1': 'Double_plasmid_1',
-    'CS_2': 'Double_plasmid_2',
-    'CS_3': 'Double_plasmid_3',
-    'KS_1': 'Single_plasmid_1',
-    'KS_2': 'Single_plasmid_2',
-    'KS_3': 'Single_plasmid_3',
-    'WT_1': 'Wildtype_1',
-    'WT_2': 'Wildtype_2',
-    'WT_3': 'Wildtype_3',
-    'media': 'media',
+    "CS": "Double plasmid",
+    "CS_1": "Double_plasmid_1",
+    "CS_2": "Double_plasmid_2",
+    "CS_3": "Double_plasmid_3",
+    "CS_4": "Double_plasmid_4",
+    "CS_5": "Double_plasmid_5",
+    "CS_6": "Double_plasmid_6",
+    "CS_7": "Double_plasmid_7",
+    "CS_8": "Double_plasmid_8",
+    "KS": "Single plasmid",
+    "KS_1": "Single_plasmid_1",
+    "KS_2": "Single_plasmid_2",
+    "KS_3": "Single_plasmid_3",
+    "KS_4": "Single_plasmid_4",
+    "KS_5": "Single_plasmid_5",
+    "KS_6": "Single_plasmid_6",
+    "KS_7": "Single_plasmid_7",
+    "KS_8": "Single_plasmid_8",
+    "WT": "Wildtype",
+    "WT_1": "Wildtype_1",
+    "WT_2": "Wildtype_2",
+    "WT_3": "Wildtype_3",
+    "media": "media",
+    "none": "none"
 }
 markerstyle_map = {
-    'CS_1': 'o',
-    'CS_2': 'o',
-    'CS_3': 'o',
-    'KS_1': 's',
-    'KS_2': 's',
-    'KS_3': 's',
-    'WT_1': 'x',
-    'WT_2': 'x',
-    'WT_3': 'x',
-    'media': '^',
+    "CS": "o",
+    #"CS_1": "o",
+    #"CS_2": "o",
+    #"CS_3": "o",
+    #"CS_4": "o",
+    #"CS_5": "o",
+    #"CS_6": "o",
+    #"CS_7": "o",
+    #"CS_8": "o",
+    "KS": "s",
+    #"KS_1": "s",
+    #"KS_2": "s",
+    #"KS_3": "s",
+    #"KS_4": "s",
+    #"KS_5": "s",
+    #"KS_6": "s",
+    #"KS_7": "s",
+    #"KS_8": "s",
+    "WT": "x",
+    #"WT_1": "x",
+    #"WT_2": "x",
+    #"WT_3": "x",
+    "media": "^",
+    "none": "o",
 }
 
 markercolor_map = {
-    'CS_1': 'blue',
-    'CS_2': 'blue',
-    'CS_3': 'blue',
-    'KS_1': 'green',
-    'KS_2': 'green',
-    'KS_3': 'green',
-    'WT_1': 'black',
-    'WT_2': 'black',
-    'WT_3': 'black',
-    'media': 'black',
+    "CS": "blue",
+    "CS_1": "blue",
+    "CS_2": "blue",
+    "CS_3": "blue",
+    "CS_4": "blue",
+    "CS_5": "blue",
+    "CS_6": "blue",
+    "CS_7": "blue",
+    "CS_8": "blue",
+    "KS": "green",
+    "KS_1": "green",
+    "KS_2": "green",
+    "KS_3": "green",
+    "KS_4": "green",
+    "KS_5": "green",
+    "KS_6": "green",
+    "KS_7": "green",
+    "KS_8": "green",
+    "WT": "black",
+    "WT_1": "black",
+    "WT_2": "black",
+    "WT_3": "black",
+    "media": "black",
+    "none": "black",
 }
 
 linestyle_map = {
-    'M9': 'solid',
+    "M9": "solid",
 }
 
 line_color_map = {
@@ -69,16 +110,30 @@ line_color_map = {
 
 plot_exclude = {
     "cells": [
-        # 'CS_1',
-        # 'CS_2',
-        # 'CS_3',
-        # 'KS_1',
-        # 'KS_2',
-        # 'KS_3',
+         #"CS",
+         'CS_1',
+         'CS_2',
+         'CS_3',
+         "CS_4",
+         "CS_5",
+         "CS_6",
+         "CS_7",
+         "CS_8",
+         #"KS",
+         'KS_1',
+         'KS_2',
+         'KS_3',
+         "KS_4",
+         "KS_5",
+         "KS_6",
+         "KS_7",
+         "KS_8",
+         "WT",
         # 'WT_1',
         # 'WT_2',
         # 'WT_3',
-        # 'media',
+         'media',
+        "none",
     ],
     "media": [
         # 'M9',
@@ -101,7 +156,7 @@ plot_exclude = {
 def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_color_map, plot_exclude):
     
     #Use the extracted_combined file from plate_reader_extraction script to get the right format
-    filepath = "26-10-21 Kirill M9/26-10-21 Kirill M9_diya_extracted_combined.csv"
+    filepath = "26-11-19 Kirill M9 exp 2/26-11-19 Kirill M9 exp 2_diya_extracted_combined.csv"
     DefaultConfig.save_file_path = filepath.split("/")[0]
 
     plate_map = load_plate_metadata("experiment_input.xlsx")
@@ -116,16 +171,16 @@ def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_c
     DefaultConfig.line_color_map = line_color_map
 
     #plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "YX comparison - no JBL001", save_image = True)
-    plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= " ", save_image = False)
-    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= " ", save_image = False)
+    plot_timecourse(sorted_data_df, summary_df, "OD600", "average", title_extra= "all intensities (no WT or media) ", save_image = True)
+    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "all intensities (no WT or media) ", save_image = True)
     
 
     #plot_by_intensity(sorted_data_df, summary_df, "OD600", "average", 5, title_extra= "t12 YX comparison", save_image = True)
     plot_exclude = {
             "cells":[
                     "none",
-                    "media",
-                    "WT",
+                    #"media",
+                    #"WT",
                     #"YX001",
                     #"YX002",
     
@@ -137,7 +192,9 @@ def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_c
             "red_intensity":[],
         }
     DefaultConfig.plot_exclude = plot_exclude
-    plot_by_intensity(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", 5, title_extra= "t12", save_image = False)
+    #list starts from 0, so timepoint 5 = 6th reading
+    #plot_by_intensity(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", 4, title_extra= "t12 - inc media and WT", save_image = True)
+    #plot_by_intensity(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", 5, title_extra= "t15 - inc media and WT", save_image = True)
     
     line_color_map = {1.4: (0.0,1.0,0.0),
                     0.56: (0.3,0.7,0.0),
@@ -150,7 +207,7 @@ def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_c
             "cells":[
                     "none",
                     "media",
-                    "WT",
+                    #"WT",
                     #"YX001",
                     #"YX002",
     
@@ -162,10 +219,10 @@ def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_c
             "red_intensity":[],
         }
     DefaultConfig.line_color_map = line_color_map
-    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison", save_image = False)
+    #plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison", save_image = False)
     
     DefaultConfig.plot_exclude = plot_exclude
-    plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison, green vs red only", save_image = False)
+    #plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison, green vs red only", save_image = False)
 
 
 
@@ -1128,7 +1185,356 @@ def print_style_templates(plate_df):
 
     print("}")
     
-    
+
+def plot_comparison_bars(
+    raw_dataframe,
+    measurement="GFP 395nm/OD600",
+    mode="intensity",
+    timepoint=4,
+    intensity=1.4,
+    config=DefaultConfig,
+    save_image=False,
+    title_extra=""
+):
+    """
+    Compare CS, KS, WT and media using grouped bar charts.
+
+    mode="intensity":
+        Compare all green intensities at one timepoint.
+
+    mode="timepoint":
+        Compare all timepoints at one green intensity.
+
+    Outputs:
+        1. Mean +/- SD
+        2. Fold change vs WT
+        3. Fold change vs media
+
+    Biological replicates:
+        CS_1, CS_2, etc. -> CS
+        KS_1, KS_2, etc. -> KS
+        WT_1, WT_2, etc. -> WT
+
+    Technical wells are averaged within each colony first.
+    """
+
+    if mode not in ("intensity", "timepoint"):
+        raise ValueError(
+            "mode must be 'intensity' or 'timepoint'"
+        )
+
+    # --------------------------------------------------
+    # 1. Select measurement and prepare metadata
+    # --------------------------------------------------
+
+    df = raw_dataframe[
+        raw_dataframe["measurement"] == measurement
+    ].copy()
+
+    if df.empty:
+        raise ValueError(f"No data for {measurement}")
+
+    df["green_intensity"] = pd.to_numeric(
+        df["green_intensity"]
+    )
+    df["red_intensity"] = pd.to_numeric(
+        df["red_intensity"]
+    )
+    df["value"] = pd.to_numeric(
+        df["value"], errors="coerce"
+    )
+
+    # Keep colony identity before grouping
+    df["colony"] = df["cells"].astype(str)
+
+    # CS_1 -> CS, WT_2 -> WT, etc.
+    df["cell_type"] = df["colony"].str.replace(
+        r"_\d+$", "", regex=True
+    )
+
+    cell_order = ["CS", "KS", "WT", "media"]
+
+    df = df[df["cell_type"].isin(cell_order)]
+
+    # --------------------------------------------------
+    # 2. Apply exclusions
+    # --------------------------------------------------
+
+    # Exclusions for intensities/media apply normally.
+    # Cell exclusions allow both colony and parent names.
+
+    excluded_cells = config.plot_exclude.get("cells", [])
+
+    # Do not exclude WT or media automatically:
+    # they are needed for fold-change comparisons.
+    # Individual colony exclusions are still respected.
+
+    df = df[
+        ~df["colony"].isin([
+            x for x in excluded_cells
+            if x not in ("WT", "media", "CS", "KS")
+        ])
+    ]
+
+    for column in [
+        "media",
+        "green_intensity",
+        "red_intensity"
+    ]:
+        excluded = config.plot_exclude.get(column, [])
+        df = df[~df[column].isin(excluded)]
+
+    # --------------------------------------------------
+    # 3. Select comparison mode
+    # --------------------------------------------------
+
+    if mode == "intensity":
+
+        df = df[df["timepoint"] == timepoint].copy()
+
+        x_column = "green_intensity"
+        xlabel = "Green light intensity"
+
+        title_selection = f"Timepoint {timepoint}"
+
+    else:
+
+        df = df[
+            np.isclose(df["green_intensity"], intensity)
+        ].copy()
+
+        x_column = "timepoint"
+        xlabel = "Timepoint"
+
+        title_selection = f"Green intensity {intensity}"
+
+    if df.empty:
+        raise ValueError(
+            "No data available for the selected conditions."
+        )
+
+    # --------------------------------------------------
+    # 4. Average technical wells within each colony
+    # --------------------------------------------------
+
+    colony_data = (
+        df.groupby(
+            [
+                x_column,
+                "cell_type",
+                "colony"
+            ],
+            as_index=False
+        )
+        .agg(
+            value=("value", "mean")
+        )
+    )
+
+    # --------------------------------------------------
+    # 5. Average biological colonies
+    # --------------------------------------------------
+
+    summary = (
+        colony_data.groupby(
+            [x_column, "cell_type"],
+            as_index=False
+        )
+        .agg(
+            mean=("value", "mean"),
+            std=("value", "std"),
+            count=("value", "count")
+        )
+    )
+
+    # For single observations, SD is undefined.
+    # Keep NaN in the returned DataFrame.
+    # Use zero only when drawing error bars.
+
+    # --------------------------------------------------
+    # 6. Calculate fold changes
+    # --------------------------------------------------
+
+    wt_reference = (
+        summary[summary["cell_type"] == "WT"]
+        [[x_column, "mean"]]
+        .rename(columns={"mean": "WT_mean"})
+    )
+
+    media_reference = (
+        summary[summary["cell_type"] == "media"]
+        [[x_column, "mean"]]
+        .rename(columns={"mean": "media_mean"})
+    )
+
+    summary = summary.merge(
+        wt_reference, on=x_column, how="left"
+    )
+
+    summary = summary.merge(
+        media_reference, on=x_column, how="left"
+    )
+
+    summary["fold_vs_WT"] = (
+        summary["mean"] /
+        summary["WT_mean"].replace(0, np.nan)
+    )
+
+    summary["fold_vs_media"] = (
+        summary["mean"] /
+        summary["media_mean"].replace(0, np.nan)
+    )
+
+    # --------------------------------------------------
+    # 7. Create figure
+    # --------------------------------------------------
+
+    x_values = sorted(summary[x_column].unique())
+
+    x = np.arange(len(x_values))
+    width = 0.20
+
+    colors = {
+        "CS": "blue",
+        "KS": "green",
+        "WT": "black",
+        "media": "grey"
+    }
+
+    fig, axes = plt.subplots(
+        3, 1,
+        figsize=(max(10, len(x_values) * 1.6), 12),
+        sharex=True
+    )
+
+    plot_columns = [
+        ("mean", "Mean +/- SD"),
+        ("fold_vs_WT", "Fold change vs WT"),
+        ("fold_vs_media", "Fold change vs media")
+    ]
+
+    for ax, (y_column, ylabel) in zip(
+        axes, plot_columns
+    ):
+
+        for i, cell in enumerate(cell_order):
+
+            subset = (
+                summary[summary["cell_type"] == cell]
+                .set_index(x_column)
+                .reindex(x_values)
+            )
+
+            y = subset[y_column].to_numpy(dtype=float)
+
+            positions = x + (i - 1.5) * width
+
+            if y_column == "mean":
+                errors = (
+                    subset["std"]
+                    .fillna(0)
+                    .to_numpy(dtype=float)
+                )
+            else:
+                errors = None
+
+            ax.bar(
+                positions,
+                y,
+                width,
+                yerr=errors,
+                capsize=3 if errors is not None else 0,
+                color=colors[cell],
+                alpha=0.8,
+                edgecolor="black",
+                linewidth=0.5,
+                label=cell_label_map.get(cell, cell)
+            )
+
+        ax.set_ylabel(ylabel)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        ax.grid(
+            axis="y",
+            alpha=0.2,
+            linestyle="--"
+        )
+
+        if y_column != "mean":
+            ax.axhline(
+                1,
+                color="grey",
+                linestyle="--",
+                linewidth=1
+            )
+
+    # --------------------------------------------------
+    # 8. Labels and legends
+    # --------------------------------------------------
+
+    axes[-1].set_xticks(x)
+
+    if mode == "intensity":
+        labels = [f"{v:g}" for v in x_values]
+    else:
+        labels = [f"t{int(v)}" for v in x_values]
+
+    axes[-1].set_xticklabels(labels)
+    axes[-1].set_xlabel(xlabel)
+
+    axes[0].legend(
+        title="Cell type",
+        ncol=4,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.18)
+    )
+
+    fig.suptitle(
+        f"{measurement}\n{title_selection} - {title_extra}",
+        fontsize=13,
+        y=1.02
+    )
+
+    plt.tight_layout()
+
+    # --------------------------------------------------
+    # 9. Save or display
+    # --------------------------------------------------
+
+    if save_image:
+
+        output_dir = (
+            Path(config.save_file_path) / "figures"
+        )
+
+        output_dir.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        safe_measurement = measurement.replace("/", "_")
+
+        filename = (
+            f"{safe_measurement}_"
+            f"{mode}_{title_selection.replace(' ', '_')}.png"
+        )
+
+        fig.savefig(
+            output_dir / filename,
+            dpi=300,
+            bbox_inches="tight"
+        )
+
+        plt.close(fig)
+
+    else:
+        plt.show()
+        plt.close(fig)
+
+    return summary
+
 
 
 
