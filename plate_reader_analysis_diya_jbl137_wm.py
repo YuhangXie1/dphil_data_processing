@@ -71,6 +71,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+import re
+import warnings
+from scipy import stats as sps
 from pathlib import Path
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
@@ -334,6 +337,39 @@ def main(cell_label_map, markerstyle_map, markercolor_map, linestyle_map, line_c
 
     DefaultConfig.plot_exclude = plot_exclude
     #plot_timecourse(sorted_data_df, summary_df, "GFP 395nm/OD600", "average", title_extra= "Double vs Single comparison, green vs red only", save_image = False)
+
+    # --- Bar charts with CS vs KS statistics ----------------------------------
+    # Bars use their own `conditions` list, so reset exclusions to "none" only.
+    DefaultConfig.plot_exclude = {"cells": ["none"], "media": [], "green_intensity": [], "red_intensity": []}
+    t12 = timepoint_at_hours(sorted_data_df, 12)   # read index nearest 12 h
+
+    # Across intensities at ~12 h and ~24 h (one panel each), raw values
+    #plot_comparison_bars(sorted_data_df, "GFP 395nm/OD600", across="intensity",
+    #                     timepoints=[t12, timepoint_at_hours(sorted_data_df, 24)],
+    #                     title_extra="CS vs KS", save_image=True)
+
+    # Same, as fold change vs WT
+    #plot_comparison_bars(sorted_data_df, "GFP 395nm/OD600", across="intensity", timepoints=t12,
+    #                     conditions=("CS", "KS", "WT"), normalise="WT", p_format="both",
+    #                     title_extra="CS vs KS", save_image=True)
+
+    # Across time at the highest and lowest green intensity
+    #plot_comparison_bars(sorted_data_df, "GFP 395nm/OD600", across="timepoint", intensities=[0, 1.4],
+    #                     conditions=("CS", "KS", "WT"), title_extra="CS vs KS", save_image=True)
+
+    # Same figure with two-way ANOVA + post-hoc contrasts instead of t-tests
+    #plot_comparison_bars(sorted_data_df, "GFP 395nm/OD600", across="intensity",
+    #                     timepoints=[t12, timepoint_at_hours(sorted_data_df, 24)],
+    #                     test="anova", title_extra="CS vs KS ANOVA", save_image=True)
+    # ...ANOVA on the responsive range only (bars for 0 and 0.028 still drawn)
+    #plot_comparison_bars(sorted_data_df, "GFP 395nm/OD600", across="intensity",
+    #                     timepoints=[t12, timepoint_at_hours(sorted_data_df, 24)],
+    #                     test="anova", stats_levels=[0.28, 0.56, 1.4],
+    #                     title_extra="CS vs KS ANOVA 0.28-1.4", save_image=True)
+
+    # Statistics table only
+    #stats = compare_conditions_stats(sorted_data_df, "GFP 395nm/OD600", "CS", "KS", timepoints=t12)
+    #print(stats)
 
 
 ### PLOT CONFIGURATION ###
@@ -1611,373 +1647,716 @@ def print_style_templates(plate_df):
     print("}")
 
 
-def plot_comparison_bars(
-    raw_dataframe,
-    measurement="GFP 395nm/OD600",
-    mode="intensity",
-    timepoint=4,
-    intensity=1.4,
-    config=DefaultConfig,
-    save_image=False,
-    title_extra=""
-):
+### BAR CHARTS AND STATISTICS ###
+#
+# Workflow:
+#   _replicate_values()        one value per biological replicate
+#   compare_conditions_stats() CS vs KS test at every (timepoint, intensity)
+#   plot_comparison_bars()     grouped bars (raw or fold change) + p-values
+#
+# Replicates: wells with a colony suffix (CS_1, CS_2 ...) are averaged per
+# colony first and each colony counts as one replicate. Wells without a suffix
+# (e.g. plain "CS") each count as one replicate. See `replicate` below.
+
+def timepoint_at_hours(raw_dataframe, hours):
     """
-    Compare CS, KS, WT and media with grouped bar charts.
+    Return the 0-based read index (timepoint) closest to a time in hours.
 
-    Three stacked panels are drawn:
-        1. Mean +/- SD
-        2. Fold change vs WT
-        3. Fold change vs media
-
-    Replicate handling (two-level averaging):
-        * technical replicates (wells of the same colony, e.g. all ``CS_1``
-          wells) are averaged first;
-        * biological replicates (colonies ``CS_1``, ``CS_2`` ... -> ``CS``)
-          are then averaged, and the SD is taken across colonies.
+    Example: ``timepoint_at_hours(sorted_data_df, 12)`` -> 4 for this plate
+    (reads at ~0, 3.6, 6, 8.2, 12.1, 15, 24.1 h).
 
     :param raw_dataframe: long-format data (``sorted_data_df``)
-    :param measurement: measurement to plot (default ``"GFP 395nm/OD600"``)
-    :param mode: ``"intensity"`` - x-axis = green intensity at one ``timepoint``;
-        ``"timepoint"`` - x-axis = read number at one green ``intensity``
-    :param timepoint: 0-based read index (used when mode="intensity")
-    :param intensity: green intensity (used when mode="timepoint")
-    :param config: styling/output settings (``plot_exclude`` and ``save_file_path`` used)
-    :param save_image: True -> save 300 dpi PNG; False -> display
-    :param title_extra: text appended to the figure title
-    :return: summary DataFrame with columns
-        ``[x_column, cell_type, mean, std, count, WT_mean, media_mean,
-        fold_vs_WT, fold_vs_media]``
-    :raises ValueError: invalid ``mode``, or no data for the selection
+    :param hours: time in hours
+    :return: int timepoint index
     """
+    times = raw_dataframe.groupby("timepoint")["time"].mean()
+    return int((times - hours).abs().idxmin())
 
-    if mode not in ("intensity", "timepoint"):
-        raise ValueError(
-            "mode must be 'intensity' or 'timepoint'"
-        )
 
-    # --------------------------------------------------
-    # 1. Select measurement and prepare metadata
-    # --------------------------------------------------
+def _replicate_values(raw_dataframe, measurement, config=DefaultConfig, replicate="auto"):
+    """
+    One value per biological replicate for every timepoint x intensity x cell type.
 
-    df = raw_dataframe[
-        raw_dataframe["measurement"] == measurement
-    ].copy()
+    * Exclusions in ``config.plot_exclude`` for media / green / red intensity
+      are applied. For cells, only individual colonies (names ending in
+      ``_<number>``, e.g. ``"CS_3"``) are excluded here - which cell types are
+      shown is chosen with ``conditions`` in :func:`plot_comparison_bars`, and
+      WT / media must stay available as fold-change references.
+    * ``cell_type`` = cell name without colony suffix (``CS_1`` -> ``CS``).
 
+    :param raw_dataframe: long-format data (``sorted_data_df``)
+    :param measurement: e.g. ``"GFP 395nm/OD600"`` or ``"OD600"``
+    :param config: PlotConfig (uses ``plot_exclude``)
+    :param replicate: what counts as one replicate:
+        ``"auto"``   - colony if the cell name has a ``_<n>`` suffix, otherwise well;
+        ``"well"``   - every well;
+        ``"colony"`` - every distinct cell name (wells averaged per name)
+    :return: DataFrame with columns ``timepoint, time, green_intensity,
+        cell_type, replicate_id, value``
+    """
+    df = raw_dataframe.loc[raw_dataframe["measurement"] == measurement].copy()
     if df.empty:
-        raise ValueError(f"No data for {measurement}")
+        raise ValueError(f"No data for measurement '{measurement}'")
 
-    # Make sure numeric columns are numeric (Excel may give objects)
-    df["green_intensity"] = pd.to_numeric(
-        df["green_intensity"]
-    )
-    df["red_intensity"] = pd.to_numeric(
-        df["red_intensity"]
-    )
-    df["value"] = pd.to_numeric(
-        df["value"], errors="coerce"
-    )
+    df = apply_exclusions(df, config, columns=("media", "green_intensity", "red_intensity"))
 
-    # Keep colony identity before grouping
+    df["green_intensity"] = pd.to_numeric(df["green_intensity"])
+    df["value"] = pd.to_numeric(df["value"], errors="coerce")
     df["colony"] = df["cells"].astype(str)
+    df["cell_type"] = df["colony"].str.replace(r"_\d+$", "", regex=True)
 
-    # Parent cell type: CS_1 -> CS, WT_2 -> WT, etc.
-    df["cell_type"] = df["colony"].str.replace(
-        r"_\d+$", "", regex=True
-    )
+    # Exclude individual colonies only (e.g. "CS_3")
+    excluded_colonies = [c for c in config.plot_exclude.get("cells", [])
+                         if re.search(r"_\d+$", str(c))]
+    df = df[~df["colony"].isin(excluded_colonies)]
 
-    # Bar order within each group (also limits which types are shown)
-    cell_order = ["CS", "KS", "WT", "media"]
+    if df["media"].nunique() > 1:
+        warnings.warn("More than one media type present - they are pooled. "
+                      "Exclude all but one with plot_exclude['media'].")
 
-    df = df[df["cell_type"].isin(cell_order)]
-
-    # --------------------------------------------------
-    # 2. Apply exclusions
-    # --------------------------------------------------
-
-    # Exclusions for intensities/media apply normally.
-    # Cell exclusions: only individual colonies (e.g. "CS_3") are honoured.
-    # Parent types WT / media / CS / KS are never excluded here, because
-    # WT and media are needed as fold-change references.
-
-    excluded_cells = config.plot_exclude.get("cells", [])
-
-    df = df[
-        ~df["colony"].isin([
-            x for x in excluded_cells
-            if x not in ("WT", "media", "CS", "KS")
-        ])
-    ]
-
-    for column in [
-        "media",
-        "green_intensity",
-        "red_intensity"
-    ]:
-        excluded = config.plot_exclude.get(column, [])
-        df = df[~df[column].isin(excluded)]
-
-    # --------------------------------------------------
-    # 3. Select comparison mode
-    # --------------------------------------------------
-
-    if mode == "intensity":
-
-        # One timepoint, x-axis = green intensity
-        df = df[df["timepoint"] == timepoint].copy()
-
-        x_column = "green_intensity"
-        xlabel = "Green light intensity"
-
-        title_selection = f"Timepoint {timepoint}"
-
+    # Choose the replicate unit
+    if replicate == "well":
+        df["replicate_id"] = df["well"]
+    elif replicate == "colony":
+        df["replicate_id"] = df["colony"]
+    elif replicate == "auto":
+        has_suffix = df["colony"] != df["cell_type"]
+        df["replicate_id"] = np.where(has_suffix, df["colony"], df["well"])
     else:
+        raise ValueError("replicate must be 'auto', 'well' or 'colony'")
 
-        # One intensity, x-axis = timepoint. isclose avoids float equality issues.
-        df = df[
-            np.isclose(df["green_intensity"], intensity)
-        ].copy()
+    # Average wells belonging to the same replicate (technical replicates)
+    reps = (df.groupby(["timepoint", "green_intensity", "cell_type", "replicate_id"], as_index=False)
+              .agg(time=("time", "mean"), value=("value", "mean")))
+    return reps
 
-        x_column = "timepoint"
-        xlabel = "Timepoint"
 
-        title_selection = f"Green intensity {intensity}"
+def _run_test(a, b, test):
+    """
+    Two-sample test between arrays ``a`` and ``b``. Returns ``(statistic, p)``,
+    or ``(nan, nan)`` when there are too few values (n < 2 in either group).
 
-    if df.empty:
-        raise ValueError(
-            "No data available for the selected conditions."
-        )
+    :param test: ``"welch"`` (t-test, unequal variances - default),
+        ``"student"`` (t-test, equal variances),
+        ``"welch_log"`` (Welch t-test on log10 values - for ratio/fold data;
+        requires all values > 0),
+        ``"mannwhitney"`` (rank-based, no normality assumption)
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    a, b = a[~np.isnan(a)], b[~np.isnan(b)]
+    if len(a) < 2 or len(b) < 2:
+        return np.nan, np.nan
 
-    # --------------------------------------------------
-    # 4. Average technical wells within each colony
-    # --------------------------------------------------
+    if test == "welch":
+        result = sps.ttest_ind(a, b, equal_var=False)
+    elif test == "student":
+        result = sps.ttest_ind(a, b, equal_var=True)
+    elif test == "welch_log":
+        if (a <= 0).any() or (b <= 0).any():
+            warnings.warn("welch_log needs positive values - returning NaN")
+            return np.nan, np.nan
+        result = sps.ttest_ind(np.log10(a), np.log10(b), equal_var=False)
+    elif test == "mannwhitney":
+        result = sps.mannwhitneyu(a, b, alternative="two-sided")
+    else:
+        raise ValueError("test must be 'welch', 'student', 'welch_log' or 'mannwhitney'")
+    return float(result.statistic), float(result.pvalue)
 
-    colony_data = (
-        df.groupby(
-            [
-                x_column,
-                "cell_type",
-                "colony"
-            ],
-            as_index=False
-        )
-        .agg(
-            value=("value", "mean")
-        )
-    )
 
-    # --------------------------------------------------
-    # 5. Average biological colonies
-    # --------------------------------------------------
+def _adjust_pvalues(p, method="holm"):
+    """
+    Multiple-comparison correction. NaNs are ignored and kept as NaN.
 
-    summary = (
-        colony_data.groupby(
-            [x_column, "cell_type"],
-            as_index=False
-        )
-        .agg(
-            mean=("value", "mean"),
-            std=("value", "std"),
-            count=("value", "count")
-        )
-    )
+    :param p: array of p-values
+    :param method: ``"holm"`` (controls family-wise error, recommended for a
+        handful of planned comparisons), ``"bh"`` (Benjamini-Hochberg false
+        discovery rate, for many comparisons) or ``None`` (no correction)
+    :return: array of adjusted p-values
+    """
+    p = np.asarray(p, dtype=float)
+    adjusted = np.full_like(p, np.nan)
+    valid = ~np.isnan(p)
+    pv = p[valid]
+    m = len(pv)
+    if m == 0 or method is None:
+        return p.copy()
 
-    # For single observations, SD is undefined.
-    # Keep NaN in the returned DataFrame.
-    # Use zero only when drawing error bars.
+    order = np.argsort(pv)
+    ranked = pv[order]
+    if method == "holm":
+        adj = np.maximum.accumulate((m - np.arange(m)) * ranked)
+    elif method == "bh":
+        adj = np.minimum.accumulate((m / np.arange(m, 0, -1)) * ranked[::-1])[::-1]
+    else:
+        raise ValueError("method must be 'holm', 'bh' or None")
+    adj = np.minimum(adj, 1.0)
 
-    # --------------------------------------------------
-    # 6. Calculate fold changes
-    # --------------------------------------------------
+    out = np.empty(m)
+    out[order] = adj
+    adjusted[valid] = out
+    return adjusted
 
-    # Reference means at each x value
-    wt_reference = (
-        summary[summary["cell_type"] == "WT"]
-        [[x_column, "mean"]]
-        .rename(columns={"mean": "WT_mean"})
-    )
 
-    media_reference = (
-        summary[summary["cell_type"] == "media"]
-        [[x_column, "mean"]]
-        .rename(columns={"mean": "media_mean"})
-    )
+def _p_to_stars(p):
+    """``*** p<0.001, ** p<0.01, * p<0.05, ns otherwise`` (blank if p is NaN)."""
+    if np.isnan(p):
+        return ""
+    if p < 0.001:
+        return "***"
+    if p < 0.01:
+        return "**"
+    if p < 0.05:
+        return "*"
+    return "ns"
 
-    # Attach the reference mean to every row with the same x value
-    summary = summary.merge(
-        wt_reference, on=x_column, how="left"
-    )
 
-    summary = summary.merge(
-        media_reference, on=x_column, how="left"
-    )
+def compare_conditions_stats(raw_dataframe, measurement, group_a="CS", group_b="KS",
+                             timepoints=None, intensities=None,
+                             test="welch", correction="holm", replicate="auto",
+                             config=DefaultConfig):
+    """
+    Test ``group_a`` vs ``group_b`` at every timepoint x green intensity.
 
-    # Divide; zero references become NaN to avoid inf
-    summary["fold_vs_WT"] = (
-        summary["mean"] /
-        summary["WT_mean"].replace(0, np.nan)
-    )
+    One test per (timepoint, intensity) on the replicate values from
+    :func:`_replicate_values`. P-values are then corrected for multiple
+    comparisons across ALL rows returned (so restrict ``timepoints`` /
+    ``intensities`` to what you actually want to compare).
 
-    summary["fold_vs_media"] = (
-        summary["mean"] /
-        summary["media_mean"].replace(0, np.nan)
-    )
+    Note: dividing both groups by the same WT or media mean does not change
+    the test, so these p-values also apply to fold-change bars.
 
-    # --------------------------------------------------
-    # 7. Create figure
-    # --------------------------------------------------
+    :param raw_dataframe: long-format data (``sorted_data_df``)
+    :param measurement: e.g. ``"GFP 395nm/OD600"``
+    :param group_a: first cell type (default ``"CS"``)
+    :param group_b: second cell type (default ``"KS"``)
+    :param timepoints: int / list of 0-based read indices; None = all
+    :param intensities: float / list of green intensities; None = all
+    :param test: see :func:`_run_test` (default ``"welch"``), or ``"anova"``
+        to use :func:`anova_stats` (two-way ANOVA across intensities; the
+        omnibus table is attached as ``result.attrs["anova"]``)
+    :param correction: ``"holm"`` (default), ``"bh"`` or ``None``
+    :param replicate: ``"auto"``, ``"well"`` or ``"colony"`` (see :func:`_replicate_values`)
+    :param config: PlotConfig (exclusions)
+    :return: DataFrame, one row per timepoint x intensity, columns
+        ``timepoint, time, green_intensity, n_a, n_b, mean_a, mean_b,
+        sd_a, sd_b, ratio_a_over_b, statistic, p, p_adj, stars, test``
+    """
+    if test == "anova":
+        posthoc, omnibus = anova_stats(raw_dataframe, measurement, group_a, group_b,
+                                       across="intensity", timepoints=timepoints,
+                                       intensities=intensities, correction=correction,
+                                       replicate=replicate, config=config)
+        posthoc.attrs["anova"] = omnibus
+        return posthoc
 
-    x_values = sorted(summary[x_column].unique())
+    reps = _replicate_values(raw_dataframe, measurement, config, replicate)
 
-    x = np.arange(len(x_values))  # bar group centres
-    width = 0.20                  # width of one bar (4 bars per group)
+    if timepoints is not None:
+        timepoints = [timepoints] if np.isscalar(timepoints) else list(timepoints)
+        reps = reps[reps["timepoint"].isin(timepoints)]
+    if intensities is not None:
+        intensities = [intensities] if np.isscalar(intensities) else list(intensities)
+        reps = reps[np.isclose(reps["green_intensity"].to_numpy()[:, None], intensities).any(axis=1)]
 
-    colors = {
-        "CS": "blue",
-        "KS": "green",
-        "WT": "black",
-        "media": "grey"
-    }
+    rows = []
+    for (timepoint, intensity), group in reps.groupby(["timepoint", "green_intensity"]):
+        a = group.loc[group["cell_type"] == group_a, "value"].to_numpy()
+        b = group.loc[group["cell_type"] == group_b, "value"].to_numpy()
+        if len(a) == 0 or len(b) == 0:
+            continue
+        statistic, p = _run_test(a, b, test)
+        rows.append({
+            "timepoint": timepoint,
+            "time": group["time"].mean(),
+            "green_intensity": intensity,
+            "n_a": len(a), "n_b": len(b),
+            "mean_a": np.mean(a), "mean_b": np.mean(b),
+            "sd_a": np.std(a, ddof=1) if len(a) > 1 else np.nan,
+            "sd_b": np.std(b, ddof=1) if len(b) > 1 else np.nan,
+            "ratio_a_over_b": np.mean(a) / np.mean(b) if np.mean(b) != 0 else np.nan,
+            "statistic": statistic,
+            "p": p,
+        })
 
-    fig, axes = plt.subplots(
-        3, 1,
-        figsize=(max(10, len(x_values) * 1.6), 12),
-        sharex=True
-    )
+    stats = pd.DataFrame(rows)
+    if stats.empty:
+        return stats
+    stats["p_adj"] = _adjust_pvalues(stats["p"].to_numpy(), correction)
+    stats["stars"] = [_p_to_stars(p) for p in stats["p_adj"]]
+    stats["test"] = f"{test} ({group_a} vs {group_b}, correction={correction})"
+    return stats
 
-    plot_columns = [
-        ("mean", "Mean +/- SD"),
-        ("fold_vs_WT", "Fold change vs WT"),
-        ("fold_vs_media", "Fold change vs media")
-    ]
 
-    for ax, (y_column, ylabel) in zip(
-        axes, plot_columns
-    ):
+def _import_statsmodels():
+    """Import statsmodels lazily (only needed for ANOVA); clear message if missing."""
+    try:
+        import statsmodels.api as sm
+        import statsmodels.formula.api as smf
+    except ImportError as error:
+        raise ImportError("ANOVA needs statsmodels: pip install statsmodels") from error
+    return sm, smf
 
-        for i, cell in enumerate(cell_order):
 
-            # Align this cell type's values to the shared x positions
-            # (missing combinations become NaN -> no bar)
-            subset = (
-                summary[summary["cell_type"] == cell]
-                .set_index(x_column)
-                .reindex(x_values)
-            )
+def _fmt_p(p):
+    """Format a p-value for display: '<0.001' or 2 significant figures."""
+    if p is None or np.isnan(p):
+        return "n/a"
+    return "<0.001" if p < 0.001 else f"{p:.2g}"
 
-            y = subset[y_column].to_numpy(dtype=float)
 
-            # Offset bars so the 4 cell types sit side by side, centred on x
-            positions = x + (i - 1.5) * width
+def anova_stats(raw_dataframe, measurement, group_a="CS", group_b="KS",
+                across="intensity", timepoints=None, intensities=None,
+                log=True, correction="holm", replicate="auto",
+                config=DefaultConfig):
+    """
+    Two-way ANOVA of ``group_a`` vs ``group_b`` with post-hoc comparisons.
 
-            # Error bars on the mean panel only
-            if y_column == "mean":
-                errors = (
-                    subset["std"]
-                    .fillna(0)
-                    .to_numpy(dtype=float)
-                )
+    Only the two compared cell types enter the model (WT / media are very
+    different and would distort the pooled variance).
+
+    ``across="intensity"`` - one model per timepoint (panel):
+        **two-way between-subjects ANOVA** ``value ~ strain * intensity``
+        (Type II sums of squares). Valid because every well is an independent
+        colony measured at one intensity.
+
+    ``across="timepoint"`` - one model per intensity (panel):
+        **mixed-design (repeated-measures) model** ``value ~ strain * time``
+        with a random intercept per replicate, because the same wells are read
+        at every timepoint. Terms are tested with Wald chi-squared tests.
+
+    Post-hoc: ``group_a - group_b`` at every level of the x-axis factor,
+    using the model's pooled error (more power than separate t-tests).
+    Post-hoc p-values are corrected across ALL rows returned (the figure).
+
+    :param raw_dataframe: long-format data (``sorted_data_df``)
+    :param measurement: e.g. ``"GFP 395nm/OD600"``
+    :param group_a: first cell type (default ``"CS"``)
+    :param group_b: second cell type (default ``"KS"``)
+    :param across: ``"intensity"`` or ``"timepoint"`` (see above)
+    :param timepoints: int / list of read indices to include; None = all
+    :param intensities: float / list of green intensities to include; None = all
+    :param log: analyse log10(values) (default True). Recommended for
+        fluorescence and ratio data: equalises variances and makes effects
+        multiplicative, as the ANOVA assumes. Values must be > 0.
+    :param correction: ``"holm"`` (default), ``"bh"`` or ``None``
+    :param replicate: ``"auto"``, ``"well"`` or ``"colony"`` (see :func:`_replicate_values`)
+    :param config: PlotConfig (exclusions)
+    :return: ``(posthoc, omnibus)``:
+
+        * ``posthoc`` - same columns as :func:`compare_conditions_stats`
+          (``timepoint, time, green_intensity, n_a, n_b, mean_a, mean_b, ...,
+          statistic, p, p_adj, stars, test``)
+        * ``omnibus`` - one row per panel x term (strain, intensity/time,
+          interaction) with ``statistic`` (F or chi2), ``df``, ``df_resid``, ``p``
+    """
+    sm, smf = _import_statsmodels()
+    if across not in ("intensity", "timepoint"):
+        raise ValueError("across must be 'intensity' or 'timepoint'")
+
+    reps = _replicate_values(raw_dataframe, measurement, config, replicate)
+    reps = reps[reps["cell_type"].isin([group_a, group_b])].copy()
+
+    if timepoints is not None:
+        timepoints = [timepoints] if np.isscalar(timepoints) else list(timepoints)
+        reps = reps[reps["timepoint"].isin(timepoints)]
+    if intensities is not None:
+        intensities = [intensities] if np.isscalar(intensities) else list(intensities)
+        reps = reps[np.isclose(reps["green_intensity"].to_numpy()[:, None], intensities).any(axis=1)]
+    reps = reps.dropna(subset=["value"])
+
+    if log:
+        if (reps["value"] <= 0).any():
+            raise ValueError("log=True needs all values > 0 (e.g. no negative blank-corrected values). "
+                             "Use log=False.")
+        reps["y"] = np.log10(reps["value"])
+    else:
+        reps["y"] = reps["value"]
+
+    panel_col, x_col = (("timepoint", "green_intensity") if across == "intensity"
+                        else ("green_intensity", "timepoint"))
+    x_name = "intensity" if across == "intensity" else "time"
+
+    omnibus_rows, post_rows = [], []
+    for panel, d in reps.groupby(panel_col):
+        d = d.copy()
+        d["strain"] = d["cell_type"]
+        d["x"] = d[x_col].map(str)                 # x-axis factor as categorical
+        d["cell"] = d["strain"] + "|" + d["x"]     # one level per bar
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")        # convergence/boundary notes from MixedLM
+
+            if across == "intensity":
+                # --- Two-way between-subjects ANOVA ---------------------------
+                model = smf.ols("y ~ C(strain) * C(x)", data=d).fit()
+                table = sm.stats.anova_lm(model, typ=2)
+                df_resid = table.loc["Residual", "df"]
+                for term, label in [("C(strain)", "strain"), ("C(x)", x_name),
+                                    ("C(strain):C(x)", f"strain x {x_name}")]:
+                    omnibus_rows.append({panel_col: panel, "term": label, "test": "F",
+                                         "statistic": table.loc[term, "F"],
+                                         "df": table.loc[term, "df"], "df_resid": df_resid,
+                                         "p": table.loc[term, "PR(>F)"]})
+                # Cell-means model: same residuals, one coefficient per bar
+                cell_model = smf.ols("y ~ C(cell) - 1", data=d).fit()
+                names = list(cell_model.params.index)
             else:
-                errors = None
+                # --- Mixed model: strain between, time within (repeated) -----
+                # Sum-to-zero coding so "strain" is the average effect over
+                # time (a true main effect), not the effect at the first read
+                model = smf.mixedlm("y ~ C(strain, Sum) * C(x, Sum)", d,
+                                    groups=d["replicate_id"]).fit(reml=True)
+                wald = model.wald_test_terms(scalar=True).table
+                for term, label in [("C(strain, Sum)", "strain"), ("C(x, Sum)", x_name),
+                                    ("C(strain, Sum):C(x, Sum)", f"strain x {x_name}")]:
+                    omnibus_rows.append({panel_col: panel, "term": label, "test": "Wald chi2",
+                                         "statistic": float(wald.loc[term, "statistic"]),
+                                         "df": wald.loc[term, "df_constraint"], "df_resid": np.nan,
+                                         "p": float(wald.loc[term, "pvalue"])})
+                cell_model = smf.mixedlm("y ~ C(cell) - 1", d, groups=d["replicate_id"]).fit(reml=True)
+                names = list(cell_model.fe_params.index)
 
-            ax.bar(
-                positions,
-                y,
-                width,
-                yerr=errors,
-                capsize=3 if errors is not None else 0,
-                color=colors[cell],
-                alpha=0.8,
-                edgecolor="black",
-                linewidth=0.5,
-                label=cell_label_map.get(cell, cell)  # uses the global map
-            )
+        # --- Post-hoc contrasts: group_a - group_b at each x level -------------
+        for xv in sorted(d[x_col].unique()):
+            name_a = f"C(cell)[{group_a}|{xv}]"
+            name_b = f"C(cell)[{group_b}|{xv}]"
+            if name_a not in names or name_b not in names:
+                continue
+            contrast = np.zeros((1, len(names)))
+            contrast[0, names.index(name_a)] = 1
+            contrast[0, names.index(name_b)] = -1
+            result = cell_model.t_test(contrast)
 
+            a = d.loc[(d["strain"] == group_a) & (d[x_col] == xv), "value"]
+            b = d.loc[(d["strain"] == group_b) & (d[x_col] == xv), "value"]
+            row = {"timepoint": panel if panel_col == "timepoint" else xv,
+                   "green_intensity": panel if panel_col == "green_intensity" else xv}
+            row.update({
+                "time": d.loc[d[x_col] == xv, "time"].mean() if panel_col == "green_intensity"
+                        else d["time"].mean(),
+                "n_a": len(a), "n_b": len(b),
+                "mean_a": a.mean(), "mean_b": b.mean(),
+                "sd_a": a.std(), "sd_b": b.std(),
+                "ratio_a_over_b": a.mean() / b.mean() if b.mean() != 0 else np.nan,
+                "statistic": float(np.squeeze(result.tvalue)),
+                "p": float(np.squeeze(result.pvalue)),
+            })
+            post_rows.append(row)
+
+    posthoc = pd.DataFrame(post_rows)
+    omnibus = pd.DataFrame(omnibus_rows)
+    if posthoc.empty:
+        return posthoc, omnibus
+
+    design = ("two-way ANOVA" if across == "intensity" else "mixed model (repeated measures)")
+    posthoc["p_adj"] = _adjust_pvalues(posthoc["p"].to_numpy(), correction)
+    posthoc["stars"] = [_p_to_stars(p) for p in posthoc["p_adj"]]
+    posthoc["test"] = (f"{design}{' on log10' if log else ''} + post-hoc "
+                       f"{group_a} vs {group_b} (correction={correction})")
+    return posthoc, omnibus
+
+
+def plot_comparison_bars(raw_dataframe,
+                         measurement="GFP 395nm/OD600",
+                         across="intensity",
+                         timepoints=None,
+                         intensities=None,
+                         conditions=("CS", "KS", "WT", "media"),
+                         normalise=None,
+                         compare=("CS", "KS"),
+                         test="welch",
+                         anova_log=True,
+                         stats_levels=None,
+                         correction="holm",
+                         p_format="stars",
+                         replicate="auto",
+                         label_map=None,
+                         colors=None,
+                         config=DefaultConfig,
+                         save_image=False,
+                         title_extra=""):
+    """
+    Grouped bar chart comparing cell types, across intensities or timepoints,
+    with optional fold change and CS-vs-KS significance brackets.
+
+    Layout:
+        * ``across="intensity"`` - x-axis = green intensity; one panel per
+          timepoint in ``timepoints`` (int or list).
+        * ``across="timepoint"`` - x-axis = read (labelled in hours); one
+          panel per intensity in ``intensities`` (float or list).
+    Within each x group there is one bar per cell type in ``conditions``.
+
+    Bars show mean +/- SD across replicates (see ``replicate``). With
+    ``normalise="WT"`` or ``"media"`` each bar is divided by the reference
+    mean at the same timepoint and intensity; the SD is propagated
+    (relative errors in quadrature) and a dashed line marks 1. Where the
+    reference is missing (e.g. media only at 0 and 1.4) the bar is left empty.
+
+    Significance: ``compare=(a, b)`` adds a bracket over the two bars at
+    every x, labelled with the corrected p-value from
+    :func:`compare_conditions_stats` (family = everything in the figure).
+
+    :param raw_dataframe: long-format data (``sorted_data_df``)
+    :param measurement: e.g. ``"GFP 395nm/OD600"`` or ``"OD600"``
+    :param across: ``"intensity"`` or ``"timepoint"``
+    :param timepoints: across="intensity": panel timepoint(s) (0-based read
+        index; use :func:`timepoint_at_hours` to convert from hours;
+        None = last read).
+        across="timepoint": optional subset of reads for the x-axis (None = all)
+    :param intensities: across="timepoint": panel intensity/intensities
+        (None = highest intensity). across="intensity": optional subset for
+        the x-axis (None = all)
+    :param conditions: cell types to draw, in bar order
+    :param normalise: ``None`` (raw values), ``"WT"`` or ``"media"``
+    :param compare: pair of cell types to test, or ``None`` for no stats
+    :param test: ``"welch"`` (default), ``"student"``, ``"welch_log"``,
+        ``"mannwhitney"`` - one test per bar pair; or ``"anova"`` - one model
+        per panel (two-way ANOVA across intensities, repeated-measures mixed
+        model across time) with post-hoc CS vs KS contrasts, see
+        :func:`anova_stats`. ANOVA results are shown under each panel title.
+    :param anova_log: ANOVA only - analyse log10 values (default True)
+    :param stats_levels: optional subset of x-axis levels to include in the
+        statistics (intensities if across="intensity", read indices if
+        across="timepoint"). All bars are still drawn; only these get
+        brackets and enter the ANOVA / correction. E.g. ``[0.28, 0.56, 1.4]``
+        to test the responsive range only.
+    :param correction: ``"holm"`` (default), ``"bh"`` or ``None``
+    :param p_format: label above brackets - ``"stars"``, ``"p"`` or ``"both"``
+    :param replicate: ``"auto"``, ``"well"`` or ``"colony"``
+    :param label_map: optional ``{cell_type: readable name}`` for the legend,
+        e.g. ``cell_label_map``
+    :param colors: optional ``{cell_type: colour}``; default uses
+        ``config.markercolor_map`` (media drawn grey)
+    :param config: PlotConfig (exclusions, colours, save path)
+    :param save_image: True -> save PNG and a stats CSV in ``figures/``
+    :param title_extra: text appended to the title (and filename)
+    :return: ``(summary, stats)`` - bar values per panel/x/cell type, and the
+        stats table from :func:`compare_conditions_stats` (empty if compare=None).
+        With ``test="anova"`` the omnibus table is in ``stats.attrs["anova"]``.
+    """
+    if across not in ("intensity", "timepoint"):
+        raise ValueError("across must be 'intensity' or 'timepoint'")
+    if normalise not in (None, "WT", "media"):
+        raise ValueError("normalise must be None, 'WT' or 'media'")
+
+    label_map = label_map or {}
+    conditions = list(conditions)
+
+    # --- 1. Replicate values and selection -----------------------------------
+    reps = _replicate_values(raw_dataframe, measurement, config, replicate)
+
+    def as_list(v):
+        return None if v is None else ([v] if np.isscalar(v) else list(v))
+
+    timepoints = as_list(timepoints)
+    intensities = as_list(intensities)
+
+    if across == "intensity":
+        panel_col, x_col = "timepoint", "green_intensity"
+        panels = timepoints if timepoints is not None else [int(reps["timepoint"].max())]
+        if intensities is not None:
+            reps = reps[np.isclose(reps["green_intensity"].to_numpy()[:, None], intensities).any(axis=1)]
+        reps = reps[reps["timepoint"].isin(panels)]
+    else:
+        panel_col, x_col = "green_intensity", "timepoint"
+        panels = intensities if intensities is not None else [float(reps["green_intensity"].max())]
+        if timepoints is not None:
+            reps = reps[reps["timepoint"].isin(timepoints)]
+        reps = reps[np.isclose(reps["green_intensity"].to_numpy()[:, None], panels).any(axis=1)]
+
+    if reps.empty:
+        raise ValueError("No data for the selected timepoints / intensities.")
+
+    # --- 2. Mean, SD, n per panel x x-value x cell type -----------------------
+    summary = (reps.groupby(["timepoint", "green_intensity", "cell_type"], as_index=False)
+                   .agg(time=("time", "mean"), mean=("value", "mean"),
+                        std=("value", "std"), n=("value", "count")))
+
+    # --- 3. Optional fold change vs WT or media -------------------------------
+    if normalise is not None:
+        ref = (summary[summary["cell_type"] == normalise]
+               [["timepoint", "green_intensity", "mean", "std"]]
+               .rename(columns={"mean": "ref_mean", "std": "ref_std"}))
+        summary = summary.merge(ref, on=["timepoint", "green_intensity"], how="left")
+        summary["ref_mean"] = summary["ref_mean"].replace(0, np.nan)
+        fold = summary["mean"] / summary["ref_mean"]
+        rel_err = np.sqrt((summary["std"].fillna(0) / summary["mean"]) ** 2
+                          + (summary["ref_std"].fillna(0) / summary["ref_mean"]) ** 2)
+        summary["bar"] = fold
+        summary["bar_err"] = fold.abs() * rel_err
+        ylabel = f"{measurement}\nfold change vs {normalise}"
+    else:
+        summary["bar"] = summary["mean"]
+        summary["bar_err"] = summary["std"].fillna(0)
+        ylabel = measurement
+
+    # --- 4. Statistics ---------------------------------------------------------
+    stats, omnibus = pd.DataFrame(), pd.DataFrame()
+    stats_timepoints = sorted(reps["timepoint"].unique())
+    stats_intensities = sorted(reps["green_intensity"].unique())
+    if stats_levels is not None:
+        if across == "intensity":
+            stats_intensities = as_list(stats_levels)
+        else:
+            stats_timepoints = as_list(stats_levels)
+
+    if compare is not None and test == "anova":
+        # One model per panel; post-hoc p-values corrected across the figure
+        stats, omnibus = anova_stats(
+            raw_dataframe, measurement, compare[0], compare[1], across=across,
+            timepoints=stats_timepoints,
+            intensities=stats_intensities,
+            log=anova_log, correction=correction, replicate=replicate, config=config)
+        stats.attrs["anova"] = omnibus
+    elif compare is not None:
+        stats = compare_conditions_stats(
+            raw_dataframe, measurement, compare[0], compare[1],
+            timepoints=stats_timepoints,
+            intensities=stats_intensities,
+            test=test, correction=correction, replicate=replicate, config=config)
+
+    # --- 5. Figure -------------------------------------------------------------
+    # Colours: markercolor_map where defined, otherwise a distinct colour per
+    # cell type (so missing entries are never all drawn in the same default)
+    fallback = plt.get_cmap("tab10").colors
+    default_colors = {c: config.markercolor_map.get(c, fallback[i % len(fallback)])
+                      for i, c in enumerate(conditions)}
+    if "media" in conditions:
+        default_colors["media"] = "grey"   # keep media distinct from WT (both black in markercolor_map)
+    colors = {**default_colors, **(colors or {})}
+
+    n_bars = len(conditions)
+    width = 0.8 / n_bars
+    time_labels = summary.groupby("timepoint")["time"].mean()
+
+    fig, axes = plt.subplots(len(panels), 1, squeeze=False, sharex=False,
+                             figsize=(max(7, 1.3 * summary[x_col].nunique() * n_bars / 2.5 + 3),
+                                      3.6 * len(panels)))
+    axes = axes[:, 0]
+
+    for ax, panel in zip(axes, panels):
+        if panel_col == "green_intensity":
+            data = summary[np.isclose(summary["green_intensity"], panel)]
+            panel_title = f"Green intensity {panel:g}"
+        else:
+            data = summary[summary["timepoint"] == panel]
+            panel_title = f"Read {panel} (~{time_labels.get(panel, np.nan):.1f} h)"
+
+        # Add the ANOVA result for this panel as a second title line
+        if not omnibus.empty:
+            if panel_col == "green_intensity":
+                terms = omnibus[np.isclose(omnibus["green_intensity"], panel)]
+            else:
+                terms = omnibus[omnibus["timepoint"] == panel]
+            stat_name = "F" if (terms["test"] == "F").all() else "χ²"
+            parts = [f"{r.term}: {stat_name}={r.statistic:.1f}, p{'' if _fmt_p(r.p).startswith('<') else '='}{_fmt_p(r.p)}"
+                     for r in terms.itertuples()]
+            panel_title += "\n" + ("ANOVA" if stat_name == "F" else "Mixed model") \
+                           + " - " + ";  ".join(parts)
+
+        x_values = sorted(data[x_col].unique())
+        x = np.arange(len(x_values))
+        bar_tops = {}   # (x index, cell type) -> top of bar + error, for brackets
+
+        for i, cell in enumerate(conditions):
+            subset = data[data["cell_type"] == cell].set_index(x_col).reindex(x_values)
+            y = subset["bar"].to_numpy(dtype=float)
+            err = subset["bar_err"].to_numpy(dtype=float)
+            positions = x + (i - (n_bars - 1) / 2) * width
+            ax.bar(positions, y, width, yerr=err, capsize=3,
+                   color=colors.get(cell, "grey"), alpha=0.8,
+                   edgecolor="black", linewidth=0.5,
+                   label=label_map.get(cell, cell))
+            for xi, (pos, top) in enumerate(zip(positions, np.nan_to_num(y) + np.nan_to_num(err))):
+                bar_tops[(xi, cell)] = (pos, top)
+
+        # Significance brackets between the two compared cell types
+        if compare is not None and not stats.empty and all(c in conditions for c in compare):
+            y_max = max((t for _, t in bar_tops.values()), default=1) or 1
+            step = 0.05 * y_max
+            highest = y_max
+            for xi, xv in enumerate(x_values):
+                if panel_col == "green_intensity":
+                    row = stats[(stats["timepoint"] == xv) & np.isclose(stats["green_intensity"], panel)]
+                else:
+                    row = stats[(stats["timepoint"] == panel) & np.isclose(stats["green_intensity"], xv)]
+                if row.empty or np.isnan(row["p_adj"].iloc[0]):
+                    continue
+                p_adj = row["p_adj"].iloc[0]
+                stars = row["stars"].iloc[0]
+                if p_format == "p":
+                    text = f"p={p_adj:.2g}"
+                elif p_format == "both":
+                    text = f"{stars}\np={p_adj:.2g}"
+                else:
+                    text = stars
+
+                (xa, ta), (xb, tb) = bar_tops[(xi, compare[0])], bar_tops[(xi, compare[1])]
+                y0 = max(ta, tb) + step
+                ax.plot([xa, xa, xb, xb], [y0, y0 + step / 2, y0 + step / 2, y0],
+                        color="black", linewidth=0.8)
+                ax.text((xa + xb) / 2, y0 + step * 0.6, text,
+                        ha="center", va="bottom", fontsize=8)
+                highest = max(highest, y0 + step * (3 if p_format == "both" else 2))
+            ax.set_ylim(top=highest * 1.05)
+
+        # Axis formatting
+        ax.set_xticks(x)
+        if x_col == "green_intensity":
+            ax.set_xticklabels([f"{v:g}" for v in x_values])
+            ax.set_xlabel("Green light intensity")
+        else:
+            ax.set_xticklabels([f"{time_labels.get(v, np.nan):.0f} h" for v in x_values])
+            ax.set_xlabel("Time")
         ax.set_ylabel(ylabel)
-
+        ax.set_title(panel_title, fontsize=10)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
+        ax.grid(axis="y", alpha=0.2, linestyle="--")
+        if normalise is not None:
+            ax.axhline(1, color="grey", linestyle="--", linewidth=1)
 
-        ax.grid(
-            axis="y",
-            alpha=0.2,
-            linestyle="--"
-        )
+    # Legend once, to the right of the top panel
+    axes[0].legend(title="Cell type", loc="upper left", bbox_to_anchor=(1.01, 1.0),
+                   borderaxespad=0.0, fontsize="small", title_fontsize="small")
 
-        # Reference line at fold change = 1 (no change)
-        if y_column != "mean":
-            ax.axhline(
-                1,
-                color="grey",
-                linestyle="--",
-                linewidth=1
-            )
+    # Title and footnote describing the test
+    norm_text = f" - fold vs {normalise}" if normalise else ""
+    title = f"{measurement} bars across {across}{norm_text} - {title_extra}"
+    fig.suptitle(title, fontsize=11)
+    if compare is not None and not stats.empty:
+        n_text = f"n = {int(stats['n_a'].min())}-{int(stats['n_a'].max())} ({compare[0]}), " \
+                 f"{int(stats['n_b'].min())}-{int(stats['n_b'].max())} ({compare[1]}) replicates"
+        if test == "anova":
+            design = ("Two-way ANOVA (strain x intensity, Type II) per panel"
+                      if across == "intensity" else
+                      "Mixed model (strain x time, random intercept per well, Wald tests) per panel")
+            method = (f"{design}{' on log10 values' if anova_log else ''}, {compare[0]} and "
+                      f"{compare[1]} only. Brackets: post-hoc {compare[0]} vs {compare[1]} contrasts "
+                      f"from the model, {correction or 'no'} correction across {len(stats)} comparisons")
+        else:
+            method = (f"{compare[0]} vs {compare[1]}: {test} test, {correction or 'no'} correction "
+                      f"across {len(stats)} comparisons")
+        fig.text(0.01, -0.01,
+                 f"{method}. {n_text}. "
+                 "* p<0.05, ** p<0.01, *** p<0.001, ns not significant. Bars: mean ± SD.",
+                 fontsize=7, ha="left", va="top", wrap=True)
+    fig.tight_layout()
 
-    # --------------------------------------------------
-    # 8. Labels and legends
-    # --------------------------------------------------
+    # --- 6. Save or show (+ stats table) ---------------------------------------
+    if save_image and not stats.empty:
+        try:
+            folder = Path(config.save_file_path) / "figures"
+            folder.mkdir(parents=True, exist_ok=True)
+            stats.to_csv(folder / f"{title.replace('/', '_div_')}_stats.csv", index=False)
+            if not omnibus.empty:
+                omnibus.to_csv(folder / f"{title.replace('/', '_div_')}_anova.csv", index=False)
+        except OSError as error:
+            print(f"Could not save stats table: {error}")
+    save_or_show(fig, title, config, save_image)
 
-    axes[-1].set_xticks(x)
-
-    if mode == "intensity":
-        labels = [f"{v:g}" for v in x_values]
-    else:
-        labels = [f"t{int(v)}" for v in x_values]  # read index, not hours
-
-    axes[-1].set_xticklabels(labels)
-    axes[-1].set_xlabel(xlabel)
-
-    axes[0].legend(
-        title="Cell type",
-        ncol=4,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.18)
-    )
-
-    fig.suptitle(
-        f"{measurement}\n{title_selection} - {title_extra}",
-        fontsize=13,
-        y=1.02
-    )
-
-    plt.tight_layout()
-
-    # --------------------------------------------------
-    # 9. Save or display
-    # --------------------------------------------------
-
-    if save_image:
-
-        output_dir = (
-            Path(config.save_file_path) / "figures"
-        )
-
-        output_dir.mkdir(
-            parents=True,
-            exist_ok=True
-        )
-
-        # TIDY: other functions use "_div_" for "/", this one uses "_";
-        # title_extra is also not included in the filename here.
-        safe_measurement = measurement.replace("/", "_")
-
-        filename = (
-            f"{safe_measurement}_"
-            f"{mode}_{title_selection.replace(' ', '_')}.png"
-        )
-
-        fig.savefig(
-            output_dir / filename,
-            dpi=300,
-            bbox_inches="tight"
-        )
-
-        plt.close(fig)
-
-    else:
-        plt.show()
-        plt.close(fig)
-
-    return summary
+    return summary, stats
 
 
 if __name__ == "__main__":
